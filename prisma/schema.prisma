@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String?
+  image         String?
+  googleId      String?
+  passwordHash  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  assets        Asset[]
+  transactions  Transaction[]
+  portfolioSnapshots PortfolioSnapshot[]
+  goals         Goal[]
+  liabilities   Liability[]
+}
+
+model AssetType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  displayName String
+  description String?
+  assets      Asset[]
+}
+
+model Asset {
+  id           String   @id @default(cuid())
+  userId       String
+  assetTypeId  Int
+  name         String
+  symbol       String?
+  isin         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  assetType   AssetType   @relation(fields: [assetTypeId], references: [id])
+  holdings    Holding[]
+  transactions Transaction[]
+  priceHistory PriceHistory[]
+}
+
+model Holding {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  quantity  Float
+  averagePrice Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User   @relation(fields: [userId], references: [id])
+  asset     Asset  @relation(fields: [assetId], references: [id])
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  INTEREST
+  SIP
+  DEPOSIT
+  WITHDRAWAL
+  SPLIT
+  BONUS
+  OTHER
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  holdingId String?
+  type      TransactionType
+  quantity  Float
+  price     Float
+  totalAmount Float
+  fee       Float?
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id])
+  asset     Asset   @relation(fields: [assetId], references: [id])
+  holding   Holding? @relation(fields: [holdingId], references: [holdingId])
+}
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  assetId   String
+  price     Float
+  currency  String   @default("INR")
+  date      DateTime @default(now())
+  source    String?
+  createdAt DateTime @default(now())
+
+  asset     Asset @relation(fields: [assetId], references: [id])
+}
+
+model PortfolioSnapshot {
+  id           String   @id @default(cuid())
+  userId       String
+  totalValue   Float
+  investedValue Float
+  pnl          Float
+  netWorth     Float?
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user         User @relation(fields: [userId], references: [id])
+}
+
+model Goal {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  targetAmount     Float
+  currentAmount    Float    @default(0)
+  targetDate       DateTime
+  monthlyContribution Float? @default(0)
+  status           GoalStatus @default(PENDING)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user            User @relation(fields: [userId], references: [id])
+}
+
+enum GoalStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model Liability {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  type      LiabilityType
+  outstandingAmount Float
+  interestRate Float?
+  emi       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+enum LiabilityType {
+  CREDIT_CARD
+  PERSONAL_LOAN
+  EDUCATION_LOAN
+  HOME_LOAN
+  OTHER
+}
