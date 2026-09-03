@@ -91,7 +91,7 @@ model Transaction {
 
   user      User    @relation(fields: [userId], references: [id])
   asset     Asset   @relation(fields: [assetId], references: [id])
-  holding   Holding? @relation(fields: [holdingId], references: [holdingId])
+  holding   Holding? @relation(fields: [holdingId], references: [id])
 }
 
 model PriceHistory {
