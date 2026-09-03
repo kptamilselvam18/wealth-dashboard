@@ -33,8 +33,5 @@
         }
       ]
     }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "output": "standalone"
+  ]
 }
