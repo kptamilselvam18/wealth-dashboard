@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       assetTypeRecord = await prisma.assetType.create({
         data: {
           name: assetType,
-          displayName: assetType.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          displayName: assetType.replace("-", " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
         },
       })
     }

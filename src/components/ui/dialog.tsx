@@ -24,9 +24,13 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
 
 interface DialogTriggerProps {
   children: React.ReactNode
+  asChild?: boolean
 }
 
-export function DialogTrigger({ children }: DialogTriggerProps) {
+export function DialogTrigger({ children, asChild }: DialogTriggerProps) {
+  if (asChild) {
+    return <>{children}</>
+  }
   return <>{children}</>
 }
 

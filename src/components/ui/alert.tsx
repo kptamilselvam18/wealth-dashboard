@@ -11,19 +11,28 @@ export function Label({ htmlFor, children, className }: { htmlFor?: string; chil
   )
 }
 
-export function Alert({ variant = "default", children }: { variant?: string; children: React.ReactNode }) {
+interface AlertProps {
+  variant?: "default" | "destructive" | "success"
+  className?: string
+  children: React.ReactNode
+}
+
+export function Alert({ variant = "default", className, children }: AlertProps) {
+  const variantClasses = {
+    default: "bg-card text-card-foreground",
+    destructive: "bg-destructive/10 border-destructive/50 text-destructive",
+    success: "bg-primary/10 border-primary/50 text-primary",
+  }
+  
   return (
-    <div role="alert" className={cn(
-      "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
-      {
-        "bg-card text-card-foreground": variant === "default",
-        "bg-destructive/10 border-destructive/50 text-destructive dark:bg-destructive/20 dark:border-destructive/40":
-          variant === "destructive",
-        "bg-primary/10 border-primary/50 text-primary dark:bg-primary/20 dark:border-primary/40":
-          variant === "success",
-      },
-      className
-    )}>
+    <div 
+      role="alert" 
+      className={cn(
+        "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+        variantClasses[variant],
+        className
+      )}
+    >
       <div className="flex items-start">
         {children}
       </div>

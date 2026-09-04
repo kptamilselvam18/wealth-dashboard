@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       className={cn(
         "rounded-lg border bg-card text-card-foreground shadow-sm",
-        variant === "destructive" && "border-destructive bg-destructive/50 text-destructive-foreground",
+        variant === "destructive" ? "border-destructive bg-destructive/50 text-destructive-foreground" : "",
         className
       )}
       {...props}

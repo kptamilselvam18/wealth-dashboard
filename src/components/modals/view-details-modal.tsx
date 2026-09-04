@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { AddInvestmentButton } from "./add-investment"
-import { AddTransactionButton } from "./add-transaction"
+import { AddInvestmentButton } from "@//components/add-investment"
+import { AddTransactionButton } from "@/components/add-transaction"
 
 export function ViewDetailsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [selectedAsset, setSelectedAsset] = useState("")
