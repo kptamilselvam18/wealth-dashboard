@@ -1,163 +1,177 @@
 "use client"
 
-import { useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import { PageError, PageLoading } from "@/components/page-state"
+import { useSummary } from "@/components/summary-provider"
+import { AddTransactionButton } from "@/components/add-transaction"
+import { formatCurrency, formatDate, formatQuantity } from "@/lib/format"
+import type { TransactionRow } from "@/lib/summary-types"
+
+type TransactionItem = TransactionRow & {
+  assetId: string
+  assetType: string
+}
+
+function typeClass(type: string) {
+  if (type === "BUY" || type === "SIP") {
+    return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+  }
+  if (type === "SELL" || type === "WITHDRAWAL") {
+    return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+  }
+  return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+}
 
 export default function TransactionsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { refresh } = useSummary()
+  const [transactions, setTransactions] = useState<TransactionItem[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    )
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch("/api/transactions", { cache: "no-store" })
+      if (!response.ok) throw new Error("Could not load your transactions")
+      const data = (await response.json()) as TransactionItem[]
+      setTransactions(data)
+      setError(null)
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load your transactions")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this transaction? The holding quantity will be adjusted.")) {
+      return
+    }
+    setDeletingId(id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/transactions?id=${id}`, { method: "DELETE" })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error ?? "Could not delete this transaction")
+      }
+      await Promise.all([load(), refresh()])
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Could not delete this transaction"
+      )
+    } finally {
+      setDeletingId(null)
+    }
   }
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin")
-    return null
-  }
-
-  const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    type: "buy",
-    asset: "",
-    quantity: "",
-    price: "",
-    fee: "",
-    date: new Date().toISOString().split("T")[0],
-    notes: "",
-  })
-
-  const handleSubmit = async () => {
-    setOpen(false)
-    router.refresh()
-  }
+  if (loading) return <PageLoading label="Loading transactions..." />
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Transactions</h1>
-            <p className="text-muted-foreground">Complete transaction history</p>
-          </div>
-          <Button onClick={() => setOpen(true)}>Add Transaction</Button>
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground">Complete transaction history</p>
         </div>
+        <AddTransactionButton onCreated={load} />
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {error && (
+        <div className="mb-4">
+          <PageError message={error} />
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">
+            {transactions?.length ?? 0} transaction{transactions?.length === 1 ? "" : "s"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!transactions || transactions.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No transactions yet. Record a buy, sell or deposit to get started.
+            </p>
+          ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[860px] text-sm">
                 <thead>
-                  <tr>
-                    <th className="p-3 border text-left font-medium text-sm">Type</th>
-                    <th className="p-3 border text-left font-medium text-sm">Asset</th>
-                    <th className="p-3 border text-left font-medium text-sm">Quantity</th>
-                    <th className="p-3 border text-left font-medium text-sm">Price</th>
-                    <th className="p-3 border text-left font-medium text-sm">Amount</th>
-                    <th className="p-3 border text-left font-medium text-sm">Date</th>
+                  <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="p-3 text-left font-medium">Date</th>
+                    <th className="p-3 text-left font-medium">Type</th>
+                    <th className="p-3 text-left font-medium">Asset</th>
+                    <th className="p-3 text-right font-medium">Qty</th>
+                    <th className="p-3 text-right font-medium">Price</th>
+                    <th className="p-3 text-right font-medium">Amount</th>
+                    <th className="p-3 text-left font-medium">Notes</th>
+                    <th className="p-3" />
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="p-3 text-center font-medium text-sm">BUY</td>
-                    <td className="p-3 text-sm">HDFC Equity Fund</td>
-                    <td className="p-3 text-center font-medium text-sm">1,000</td>
-                    <td className="p-3 text-center font-medium text-sm">₹500</td>
-                    <td className="p-3 text-center font-medium text-sm">₹50,000</td>
-                    <td className="p-3 text-center text-xs text-muted-foreground">Jan 15</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 text-center font-medium text-sm">DIVIDEND</td>
-                    <td className="p-3 text-sm">TCS</td>
-                    <td className="p-3 text-center font-medium text-sm">50</td>
-                    <td className="p-3 text-center font-medium text-sm">-</td>
-                    <td className="p-3 text-center font-medium text-sm">₹750</td>
-                    <td className="p-3 text-center text-xs text-muted-foreground">Mar 10</td>
-                  </tr>
+                  {transactions.map((transaction) => (
+                    <tr
+                      key={transaction.id}
+                      className="border-b transition-colors hover:bg-accent/50"
+                    >
+                      <td className="whitespace-nowrap p-3 text-muted-foreground">
+                        {formatDate(transaction.date)}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeClass(
+                            transaction.type
+                          )}`}
+                        >
+                          {transaction.type}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="font-medium">{transaction.name}</div>
+                        {transaction.symbol && (
+                          <div className="text-xs text-muted-foreground">
+                            {transaction.symbol}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono">
+                        {formatQuantity(transaction.quantity)}
+                      </td>
+                      <td className="p-3 text-right font-mono">
+                        {formatCurrency(transaction.price)}
+                      </td>
+                      <td className="p-3 text-right font-medium">
+                        {formatCurrency(transaction.totalAmount)}
+                      </td>
+                      <td className="max-w-[220px] truncate p-3 text-xs text-muted-foreground">
+                        {transaction.notes || "—"}
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(transaction.id)}
+                          disabled={deletingId === transaction.id}
+                          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                          aria-label="Delete transaction"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Transaction</DialogTitle>
-              <DialogDescription>Enter the details of your transaction</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
-              <div>
-                <Label htmlFor="type">Type</Label>
-                <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="buy">Buy</SelectItem>
-                    <SelectItem value="sell">Sell</SelectItem>
-                    <SelectItem value="dividend">Dividend</SelectItem>
-                    <SelectItem value="interest">Interest</SelectItem>
-                    <SelectItem value="sip">SIP</SelectItem>
-                    <SelectItem value="deposit">Deposit</SelectItem>
-                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="asset">Asset</Label>
-                <Input id="asset" value={formData.asset} onChange={(e) => setFormData({ ...formData, asset: e.target.value })} placeholder="e.g., Reliance Industries" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input id="quantity" type="number" placeholder="Quantity" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} step="0.001" />
-                </div>
-                <div>
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input id="price" type="number" placeholder="Price per unit" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} step="0.01" />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="fee">Fee (₹)</Label>
-                <Input id="fee" type="number" placeholder="Fee" value={formData.fee} onChange={(e) => setFormData({ ...formData, fee: e.target.value })} />
-              </div>
-
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" placeholder="Additional notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit">Save Transaction</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

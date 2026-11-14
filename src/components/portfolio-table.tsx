@@ -1,56 +1,104 @@
 "use client"
 
-export function PortfolioTable() {
-  const holdings = [
-    { name: "Reliance Industries", symbol: "RELIANCE", type: "Stock", qty: 10, avgPrice: 2500, currPrice: 2850, invested: 25000, value: 28500, pnl: 3500, return: 14.0 },
-    { name: "HDFC Flexi Cap Fund", symbol: "HDFCFLEXI", type: "Mutual Fund", qty: 500, avgPrice: 550, currPrice: 652, invested: 275000, value: 326000, pnl: 51000, return: 18.5 },
-    { name: "SBI Fixed Deposit", symbol: "SBI-FD", type: "Fixed Deposit", qty: 1, avgPrice: 100000, currPrice: 106800, invested: 100000, value: 106800, pnl: 6800, return: 6.8 },
-    { name: "Gold ETF", symbol: "GOLD", type: "Gold", qty: 20, avgPrice: 65000, currPrice: 72500, invested: 1300000, value: 1450000, pnl: 150000, return: 11.5 },
-  ]
+import { useState } from "react"
+import { Trash2 } from "lucide-react"
+import { useSummary } from "@/components/summary-provider"
+import type { HoldingRow } from "@/lib/summary-types"
+import { formatCurrency, formatPercent, formatQuantity } from "@/lib/format"
+
+export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
+  const { refresh } = useSummary()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Remove this holding from your portfolio?")) return
+    setDeletingId(id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/assets?id=${id}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Could not remove this holding")
+      await refresh()
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Could not remove this holding")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  if (holdings.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        Your portfolio is empty. Use “Add Investment” to record your first holding.
+      </p>
+    )
+  }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b">
-            <th className="p-3 text-left font-medium text-sm">Asset</th>
-            <th className="p-3 text-center font-medium text-sm">Type</th>
-            <th className="p-3 text-center font-medium text-sm">Qty</th>
-            <th className="p-3 text-right font-medium text-sm">Avg Price</th>
-            <th className="p-3 text-right font-medium text-sm">Curr Price</th>
-            <th className="p-3 text-right font-medium text-sm">Invested</th>
-            <th className="p-3 text-right font-medium text-sm">Current</th>
-            <th className="p-3 text-right font-medium text-sm">P&L</th>
-            <th className="p-3 text-right font-medium text-sm">Return</th>
-          </tr>
-        </thead>
-        <tbody>
-          {holdings.map((h, index) => (
-            <tr key={index} className="border-b hover:bg-accent/50">
-              <td className="p-3">
-                <div className="font-medium">{h.name}</div>
-                <div className="text-xs text-muted-foreground">{h.symbol}</div>
-              </td>
-              <td className="p-3 text-center text-sm">{h.type}</td>
-              <td className="p-3 text-center font-mono text-sm">{h.qty}</td>
-              <td className="p-3 text-right font-mono text-sm">₹{h.avgPrice.toLocaleString()}</td>
-              <td className="p-3 text-right font-mono text-sm">₹{h.currPrice.toLocaleString()}</td>
-              <td className="p-3 text-right text-sm">₹{h.invested.toLocaleString()}</td>
-              <td className="p-3 text-right font-mono text-sm">₹{h.value.toLocaleString()}</td>
-              <td className="p-3 text-right font-mono text-sm">
-                <span className={h.pnl >= 0 ? "text-green-600" : "text-red-600"}>
-                  {h.pnl >= 0 ? "+" : ""}₹{h.pnl.toLocaleString()}
-                </span>
-              </td>
-              <td className="p-3 text-right font-mono text-sm">
-                <span className={h.return >= 0 ? "text-green-600" : "text-red-600"}>
-                  {h.return >= 0 ? "+" : ""}{h.return}%
-                </span>
-              </td>
+    <div className="space-y-2">
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] text-sm">
+          <thead>
+            <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="p-3 text-left font-medium">Asset</th>
+              <th className="p-3 text-center font-medium">Type</th>
+              <th className="p-3 text-right font-medium">Qty</th>
+              <th className="p-3 text-right font-medium">Avg Price</th>
+              <th className="p-3 text-right font-medium">Current</th>
+              <th className="p-3 text-right font-medium">Invested</th>
+              <th className="p-3 text-right font-medium">Value</th>
+              <th className="p-3 text-right font-medium">P&amp;L</th>
+              <th className="p-3 text-right font-medium">Return</th>
+              <th className="p-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {holdings.map((holding) => (
+              <tr key={holding.id} className="border-b transition-colors hover:bg-accent/50">
+                <td className="p-3">
+                  <div className="font-medium">{holding.name}</div>
+                  {holding.symbol && (
+                    <div className="text-xs text-muted-foreground">{holding.symbol}</div>
+                  )}
+                </td>
+                <td className="p-3 text-center text-muted-foreground">{holding.type}</td>
+                <td className="p-3 text-right font-mono">{formatQuantity(holding.quantity)}</td>
+                <td className="p-3 text-right font-mono">{formatCurrency(holding.averagePrice)}</td>
+                <td className="p-3 text-right font-mono">{formatCurrency(holding.currentPrice)}</td>
+                <td className="p-3 text-right">{formatCurrency(holding.invested)}</td>
+                <td className="p-3 text-right font-mono">{formatCurrency(holding.currentValue)}</td>
+                <td
+                  className={`p-3 text-right font-mono ${
+                    holding.pnl >= 0 ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {holding.pnl >= 0 ? "+" : "-"}
+                  {formatCurrency(Math.abs(holding.pnl))}
+                </td>
+                <td
+                  className={`p-3 text-right font-mono ${
+                    holding.returnPercent >= 0 ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {holding.type === "Cash" ? "—" : formatPercent(holding.returnPercent)}
+                </td>
+                <td className="p-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(holding.id)}
+                    disabled={deletingId === holding.id}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    aria-label={`Remove ${holding.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

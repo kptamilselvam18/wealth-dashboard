@@ -1,13 +1,11 @@
 import "./globals.css"
+import type { Metadata } from "next"
 import { Providers } from "@/components/providers"
 import { Navigation } from "@/components/navigation"
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Wealth Dashboard",
   description: "Track your investments and financial portfolio in one place",
-  icons: {
-    favicon: "/favicon.ico",
-  },
 }
 
 export default function RootLayout({
@@ -16,15 +14,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
-          <div className="min-h-screen bg-background">
-            <Navigation />
-            <main className="container mx-auto px-4 py-6">
-              {children}
-            </main>
-          </div>
+          <Navigation />
+          <main>{children}</main>
         </Providers>
       </body>
     </html>

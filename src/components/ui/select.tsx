@@ -3,27 +3,32 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-interface SelectProps {
-  value?: string
-  defaultValue?: string
+export interface SelectProps
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onChange"> {
   onValueChange?: (value: string) => void
-  children: React.ReactNode
-  className?: string
-  required?: boolean
+  onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void
   placeholder?: string
-  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void
 }
 
-export function Select({ value, defaultValue, onValueChange, children, className, required, placeholder, onChange }: SelectProps) {
+export function Select({
+  className,
+  children,
+  onValueChange,
+  onChange,
+  placeholder,
+  ...props
+}: SelectProps) {
   return (
     <select
-      value={value}
-      defaultValue={defaultValue}
-      onChange={onChange}
       className={cn(
-        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
+      onChange={(event) => {
+        onValueChange?.(event.target.value)
+        onChange?.(event)
+      }}
+      {...props}
     >
       {placeholder && (
         <option value="" disabled>
@@ -35,25 +40,17 @@ export function Select({ value, defaultValue, onValueChange, children, className
   )
 }
 
-export function SelectTrigger({ children, className }: { children: React.ReactNode; className?: string }) {
+export function SelectItem({
+  value,
+  children,
+  disabled,
+}: {
+  value: string
+  children: React.ReactNode
+  disabled?: boolean
+}) {
   return (
-    <div className={cn("flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm", className)}>
-      {children}
-    </div>
-  )
-}
-
-export function SelectValue({ placeholder }: { placeholder?: string }) {
-  return <span className="text-muted-foreground">{placeholder}</span>
-}
-
-export function SelectContent({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
-}
-
-export function SelectItem({ value, children, className }: { value: string; children: React.ReactNode; className?: string }) {
-  return (
-    <option value={value} className={className}>
+    <option value={value} disabled={disabled}>
       {children}
     </option>
   )

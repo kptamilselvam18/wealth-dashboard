@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wealth Dashboard
 
-## Getting Started
+A personal investment and net-worth tracker built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, **Prisma** and **NextAuth**, styled with **Tailwind CSS v4**.
 
-First, run the development server:
+## Features
+
+- Email/password authentication (plus Google sign-in when OAuth credentials are configured)
+- **Dashboard** with net worth, investments, cash, liabilities and recent activity
+- **Portfolio** with per-holding invested/current value, P&L, return %, allocation and performance history
+- **Transactions** for buys, sells, SIPs, dividends, interest, deposits and withdrawals, with automatic holding updates
+- **Analytics** with top/under performers and a monthly investment trend chart
+- Cash balances and liabilities included in net worth
+- Light / dark / system theme, persisted in the browser
+
+## Local setup
+
+Requirements: Node.js 20+ and a PostgreSQL database.
 
 ```bash
+npm install
+cp .env.example .env      # then fill in DATABASE_URL and AUTH_SECRET
+
+npx prisma migrate deploy # create the tables from prisma/migrations
+npm run db:seed           # optional: demo portfolio
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Generate a secret with `openssl rand -base64 32`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open http://localhost:3000 — you are redirected to `/auth/signin`, where new
+accounts can be created from the sign-in form.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Demo account (after seeding):** `demo@wealth.app` / `demo1234`
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm start` | Run the production build |
+| `npm run lint` | ESLint |
+| `npm run db:migrate` | Apply committed Prisma migrations |
+| `npm run db:migrate:dev` | Create a migration from schema changes |
+| `npm run db:push` | Sync schema without migrations (prototyping) |
+| `npm run db:seed` | Reset and load the demo portfolio |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md). Vercel builds run
+`prisma migrate deploy && next build`, so migrations are applied on every deploy.
 
-## Deploy on Vercel
+## API
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Route | Methods | Description |
+| --- | --- | --- |
+| `/api/auth/[...nextauth]` | GET, POST | NextAuth handlers |
+| `/api/auth/register` | POST | Create a credentials account |
+| `/api/summary` | GET | Portfolio totals, allocation, holdings, history |
+| `/api/assets` | GET, POST, PUT, DELETE | Assets/holdings |
+| `/api/transactions` | GET, POST, DELETE | Transaction history (keeps holdings in sync) |
+| `/api/prices` | GET, POST | Manual/mock prices per symbol |
+| `/api/profile` | PATCH, DELETE | Update name, delete account |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- Prices come from a deterministic mock feed in `/api/prices`; wire in a real market-data provider for live quotes.
+- Portfolio snapshots are recorded whenever a holding or transaction changes, which powers the performance chart.
+- `prisma/seed.mjs` creates the demo user, eight holdings, monthly SIPs, two liabilities and twelve months of snapshots.

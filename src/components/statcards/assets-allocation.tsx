@@ -1,44 +1,54 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { AllocationSlice } from "@/lib/summary-types"
+import { formatCurrency } from "@/lib/format"
 
-export function AssetAllocationCard() {
-  const allocations = [
-    { name: "Equity", value: 45, color: "#2563eb" },
-    { name: "Mutual Funds", value: 25, color: "#10b981" },
-    { name: "Fixed Income", value: 15, color: "#f59e0b" },
-    { name: "Gold", value: 8, color: "#fbbf24" },
-    { name: "Silver", value: 2, color: "#9ca3af" },
-    { name: "Cash", value: 5, color: "#6b7280" },
-  ]
-
+export function AssetAllocationCard({ allocation }: { allocation: AllocationSlice[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Asset Allocation</CardTitle>
+        <CardTitle className="text-base font-semibold">Asset Allocation</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {allocations.map((item) => (
-            <div key={item.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+        {allocation.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Add investments to see your allocation.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {allocation.map((item) => (
+              <div key={item.name} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span>{item.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      {formatCurrency(item.value)}
+                    </span>
+                    <span className="w-12 text-right font-medium">
+                      {item.percent.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${item.value}%`, backgroundColor: item.color }}
+                    style={{
+                      width: `${Math.min(item.percent, 100)}%`,
+                      backgroundColor: item.color,
+                    }}
                   />
                 </div>
-                <span className="text-sm font-medium w-12 text-right">
-                  {item.value}%
-                </span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

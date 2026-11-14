@@ -1,131 +1,122 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { PerformanceChart } from "@/components/charts/performance-chart"
-import { AssetAllocationCard } from "@/components/statcards/assets-allocation"
+import { PageError, PageLoading } from "@/components/page-state"
+import { useSummary } from "@/components/summary-provider"
 import { StatCard } from "@/components/statcards/stat-card"
+import { AssetAllocationCard } from "@/components/statcards/assets-allocation"
+import { PerformanceChart } from "@/components/charts/performance-chart"
+import { MonthlyInvestmentsChart } from "@/components/charts/monthly-investments"
+import { formatCurrency, formatPercent } from "@/lib/format"
 
 export default function AnalyticsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { summary, loading, error } = useSummary()
+  const [timeRange, setTimeRange] = useState("ALL")
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    )
+  if (loading) return <PageLoading label="Crunching your numbers..." />
+  if (error || !summary) {
+    return <PageError message={error ?? "No analytics available"} />
   }
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin")
-    return null
-  }
-
-  const [timeRange, setTimeRange] = useState("1M")
+  const best = summary.topPerformers[0]
+  const worst = summary.underPerformers[0]
+  const investmentCount = summary.holdings.filter((holding) => holding.type !== "Cash").length
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Analytics</h1>
-            <p className="text-muted-foreground">Portfolio performance and insights</p>
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Analytics</h1>
+        <p className="text-muted-foreground">Portfolio performance and insights</p>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Return" value="+12.5%" change={12.5} changeLabel="vs last year" />
-          <StatCard title="Best Asset" value="HDFC Equity" />
-          <StatCard title="Worst Asset" value="Gold ETF" />
-          <StatCard title="Sharpe Ratio" value="1.2" />
-        </div>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Return"
+          value={formatPercent(summary.overallReturn)}
+          change={summary.overallReturn}
+          changeLabel="since purchase"
+        />
+        <StatCard
+          title="Unrealised P&L"
+          value={formatCurrency(summary.totalPnl)}
+        />
+        <StatCard title="Best Asset" value={best?.name ?? "—"} />
+        <StatCard title="Holdings" value={String(investmentCount)} />
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <PerformanceChart timeRange={timeRange} onTimeRangeChange={setTimeRange} />
-          <AssetAllocationCard />
-        </div>
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <PerformanceChart
+          performance={summary.performance}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+        />
+        <AssetAllocationCard allocation={summary.allocation} />
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Performers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-2 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="font-medium">HDFC Equity Fund</span>
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Top Performers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {summary.topPerformers.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Add holdings to see your best performers.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {summary.topPerformers.map((performer) => (
+                  <div
+                    key={`${performer.name}-${performer.symbol}`}
+                    className="flex items-center justify-between border-b py-2 last:border-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="font-medium">{performer.name}</span>
+                    </div>
+                    <span className="font-medium text-emerald-600">
+                      {formatPercent(performer.returnPercent)}
+                    </span>
                   </div>
-                  <span className="text-green-600 font-medium">+18.5%</span>
-                </div>
-                <div className="flex justify-between items-center p-2 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="font-medium">Reliance Industries</span>
-                  </div>
-                  <span className="text-green-600 font-medium">+15.2%</span>
-                </div>
-                <div className="flex justify-between items-center p-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="font-medium">ICICI Bank</span>
-                  </div>
-                  <span className="text-green-600 font-medium">+12.8%</span>
-                </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Underperformers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-2 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="font-medium">Gold ETF</span>
-                  </div>
-                  <span className="text-red-600 font-medium">-3.2%</span>
-                </div>
-                <div className="flex justify-between items-center p-2 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="font-medium">Silver Fund</span>
-                  </div>
-                  <span className="text-red-600 font-medium">-2.1%</span>
-                </div>
-                <div className="flex justify-between items-center p-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="font-medium">Fixed Deposit</span>
-                  </div>
-                  <span className="text-red-600 font-medium">+0.5%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Investment Trend</CardTitle>
+            <CardTitle className="text-base font-semibold">Underperformers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              Monthly trend chart will be displayed here
-            </div>
+            {!worst ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No loss-making holdings right now.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {summary.underPerformers.map((performer) => (
+                  <div
+                    key={`${performer.name}-${performer.symbol}`}
+                    className="flex items-center justify-between border-b py-2 last:border-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="font-medium">{performer.name}</span>
+                    </div>
+                    <span className="font-medium text-red-600">
+                      {formatPercent(performer.returnPercent)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <MonthlyInvestmentsChart data={summary.monthlyInvestments} />
     </div>
   )
 }

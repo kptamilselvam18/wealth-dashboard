@@ -1,112 +1,165 @@
 "use client"
 
-import { useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { useEffect, useState } from "react"
+import { signOut, useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Select, SelectItem } from "@/components/ui/select"
+import { PageLoading } from "@/components/page-state"
+import { useTheme, type Theme } from "@/components/theme-provider"
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status, update } = useSession()
+  const { theme, setTheme } = useTheme()
+  const [name, setName] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+  useEffect(() => {
+    setName(session?.user?.name ?? "")
+  }, [session?.user?.name])
+
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSaving(true)
+    setMessage(null)
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error ?? "Could not save your profile")
+      }
+      await update({ name: name.trim() })
+      setMessage({ type: "success", text: "Profile updated" })
+    } catch (saveError) {
+      setMessage({
+        type: "error",
+        text: saveError instanceof Error ? saveError.message : "Could not save your profile",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "This permanently deletes your account, portfolio and transactions. Continue?"
     )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setMessage(null)
+    try {
+      const response = await fetch("/api/profile", { method: "DELETE" })
+      if (!response.ok) throw new Error("Could not delete your account")
+      await signOut({ callbackUrl: "/auth/signin" })
+    } catch (deleteError) {
+      setMessage({
+        type: "error",
+        text: deleteError instanceof Error ? deleteError.message : "Could not delete your account",
+      })
+      setDeleting(false)
+    }
   }
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin")
-    return null
-  }
+  if (status === "loading") return <PageLoading />
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6">Profile</h1>
+    <div className="mx-auto max-w-5xl px-4 py-6">
+      <h1 className="mb-6 text-2xl font-bold">Profile</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Account Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Your name"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  defaultValue={session?.user?.email ?? ""}
+                  disabled
+                  className="opacity-70"
+                />
+              </div>
+              {message && (
+                <p
+                  className={`text-sm ${
+                    message.type === "success" ? "text-emerald-600" : "text-destructive"
+                  }`}
+                >
+                  {message.text}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={saving || !name.trim()}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Account Information</CardTitle>
+              <CardTitle className="text-base font-semibold">Appearance</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Name</label>
-                <Input defaultValue={session?.user?.name || ""} placeholder="Your name" className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <Input defaultValue={session?.user?.email || ""} disabled className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Currency</label>
-                <Select defaultValue="INR">
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="INR">Indian Rupee (INR)</SelectItem>
-                    <SelectItem value="USD">US Dollar (USD)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full">Save Changes</Button>
+            <CardContent className="space-y-1.5">
+              <Label htmlFor="theme">Theme</Label>
+              <Select
+                id="theme"
+                value={theme}
+                onValueChange={(value) => setTheme(value as Theme)}
+              >
+                <SelectItem value="light">Light</SelectItem>
+                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+              </Select>
+              <p className="pt-2 text-xs text-muted-foreground">
+                Your theme is stored in this browser.
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Appearance</CardTitle>
+              <CardTitle className="text-base font-semibold text-destructive">
+                Danger Zone
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Theme</label>
-                <Select defaultValue="system">
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Connected Accounts</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">G</span>
-                  <span className="font-medium">Google</span>
-                </div>
-                <span className="text-sm text-muted-foreground">Connected</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="destructive" className="w-full" onClick={() => signOut({ callbackUrl: "/auth/signin" })}>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+              >
                 Sign Out
               </Button>
-              <Button variant="destructive" className="w-full">
-                Delete Account
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Account"}
               </Button>
             </CardContent>
           </Card>
