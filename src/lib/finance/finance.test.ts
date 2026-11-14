@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { getCalculators } from "../calculators/definitions"
 import {
   averageBuyPrice,
   cagr,
@@ -16,6 +17,50 @@ import {
   swpProjection,
   xirr,
 } from "./index"
+
+describe("calculator registry", () => {
+  const calculators = getCalculators()
+
+  it("ships a searchable catalog", () => {
+    expect(calculators.length).toBeGreaterThanOrEqual(20)
+    const slugs = calculators.map((calculator) => calculator.slug)
+    expect(new Set(slugs).size).toBe(slugs.length)
+  })
+
+  it.each(calculators.map((calculator) => [calculator.slug, calculator] as const))(
+    "%s computes valid results from its defaults",
+    (_slug, calculator) => {
+      expect(calculator.formula.length).toBeGreaterThan(0)
+      expect(calculator.assumptions.length).toBeGreaterThan(0)
+
+      const inputs: Record<string, number> = {}
+      for (const field of calculator.fields) {
+        expect(Number.isFinite(field.defaultValue)).toBe(true)
+        if (field.min !== undefined) expect(field.defaultValue).toBeGreaterThanOrEqual(field.min)
+        if (field.max !== undefined) expect(field.defaultValue).toBeLessThanOrEqual(field.max)
+        inputs[field.key] = field.defaultValue
+      }
+
+      const output = calculator.compute(inputs)
+      expect(output.results.length).toBeGreaterThan(0)
+      for (const result of output.results) {
+        expect(Number.isFinite(result.value)).toBe(true)
+      }
+
+      if (output.chart) {
+        expect(output.chart.data.length).toBeGreaterThan(1)
+        const keys = Object.keys(output.chart.data[0])
+        expect(keys).toContain(output.chart.xKey)
+        for (const series of output.chart.series) {
+          expect(keys).toContain(series.key)
+          for (const row of output.chart.data) {
+            expect(Number.isFinite(Number(row[series.key]))).toBe(true)
+          }
+        }
+      }
+    }
+  )
+})
 
 describe("sipProjection", () => {
   it("matches the annuity formula for a 12% return", () => {
