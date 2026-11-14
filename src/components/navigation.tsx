@@ -4,115 +4,175 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { Menu, X } from "lucide-react"
+import {
+  Calculator,
+  LayoutDashboard,
+  LineChart,
+  ListOrdered,
+  Menu,
+  Moon,
+  PieChart,
+  Settings,
+  Sun,
+  X,
+} from "lucide-react"
+import { useTheme } from "@/components/theme-provider"
+import { cn } from "@/lib/utils"
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/portfolio", label: "Portfolio" },
-  { href: "/transactions", label: "Transactions" },
-  { href: "/analytics", label: "Analytics" },
+const groups = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/portfolio", label: "My Portfolio", icon: PieChart },
+      { href: "/transactions", label: "Transactions", icon: ListOrdered },
+      { href: "/analytics", label: "Analytics", icon: LineChart },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [{ href: "/calculators", label: "Calculators", icon: Calculator }],
+  },
+  {
+    label: "Account",
+    items: [{ href: "/profile", label: "Settings", icon: Settings }],
+  },
 ]
 
-export function Navigation() {
+function Brand() {
+  return (
+    <Link href="/dashboard" className="flex items-center gap-2.5">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+        W
+      </span>
+      <span className="text-base font-semibold tracking-tight">Wealth</span>
+    </Link>
+  )
+}
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+
+  return (
+    <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4">
+      {groups.map((group) => (
+        <div key={group.label}>
+          <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {group.label}
+          </p>
+          <div className="space-y-0.5">
+            {group.items.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  )
+}
+
+function AccountFooter() {
+  const { data: session } = useSession()
+  const { theme, setTheme } = useTheme()
+  const isDark = theme === "dark"
+
+  return (
+    <div className="border-t border-border p-3">
+      <button
+        type="button"
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        className="mb-1 flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      >
+        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        {isDark ? "Light mode" : "Dark mode"}
+      </button>
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {session?.user?.name || session?.user?.email}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{session?.user?.email}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+          className="shrink-0 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent"
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function Navigation() {
   const { data: session } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   if (!session) return null
 
-  const displayName = session.user?.name || session.user?.email || "Account"
-
   return (
-    <nav className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="text-xl font-bold tracking-tight">
-              Wealth
-            </Link>
-            <div className="hidden items-center gap-1 md:flex">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <Link
-              href="/profile"
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                pathname === "/profile"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              }`}
-            >
-              {displayName}
-            </Link>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
-            >
-              Sign out
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="rounded-md p-2 hover:bg-accent md:hidden"
-            onClick={() => setMobileOpen((open) => !open)}
-            aria-label="Toggle navigation"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+    <>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card lg:flex">
+        <div className="flex h-16 items-center border-b border-border px-5">
+          <Brand />
         </div>
+        <NavLinks />
+        <AccountFooter />
+      </aside>
 
-        {mobileOpen && (
-          <div className="flex flex-col gap-1 border-t border-border py-3 md:hidden">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur lg:hidden">
+        <Brand />
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="rounded-md p-2 hover:bg-accent"
+          aria-label="Open navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </header>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-border bg-card">
+            <div className="flex h-16 items-center justify-between border-b border-border px-5">
+              <Brand />
+              <button
+                type="button"
                 onClick={() => setMobileOpen(false)}
-                className={`rounded-md px-3 py-2 text-sm font-medium ${
-                  pathname === item.href
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent"
-                }`}
+                className="rounded-md p-2 hover:bg-accent"
+                aria-label="Close navigation"
               >
-                {item.label}
-              </Link>
-            ))}
-            <Link
-              href="/profile"
-              onClick={() => setMobileOpen(false)}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
-            >
-              Profile
-            </Link>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-accent"
-            >
-              Sign out
-            </button>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <NavLinks onNavigate={() => setMobileOpen(false)} />
+            <AccountFooter />
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      )}
+    </>
   )
 }
