@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { signIn } from "next-auth/react"
+import { getSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,12 +58,20 @@ export function SignInForm() {
         callbackUrl,
       })
 
-      if (!result?.ok) {
+      // NextAuth answers a rejected sign-in with HTTP 200 and an `error`
+      // field, so `result.ok` alone would treat bad credentials as success
+      // and bounce off the protected route with no message.
+      if (result?.error) {
         throw new Error(
           mode === "register"
             ? "Account created, but sign in failed. Please sign in."
-            : "Invalid email or password"
+            : "Invalid email or password. If you have not created an account yet, use “Create an account” below."
         )
+      }
+
+      const session = await getSession()
+      if (!session?.user) {
+        throw new Error("Sign-in did not complete. Please try again.")
       }
 
       router.push(callbackUrl)
