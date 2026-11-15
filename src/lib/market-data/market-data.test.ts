@@ -33,9 +33,10 @@ describe("yahoo parsing", () => {
           meta: {
             currency: "INR",
             regularMarketPrice: 1339.7,
-            chartPreviousClose: 1328.4,
+            chartPreviousClose: 1339.7,
             regularMarketTime: 1794563884,
           },
+          indicators: { quote: [{ close: [1320, 1325.4, 1339.7] }] },
         },
       ],
       error: null,
@@ -43,17 +44,38 @@ describe("yahoo parsing", () => {
   }
 
   it("builds an encoded chart URL", () => {
-    expect(yahooChartUrl("RELIANCE.NS")).toContain("/v8/finance/chart/RELIANCE.NS?range=1d")
+    expect(yahooChartUrl("RELIANCE.NS")).toContain("/v8/finance/chart/RELIANCE.NS?range=5d")
   })
 
   it("extracts price, previous close and timestamp", () => {
     const quote = parseYahooChart(payload, "RELIANCE")
     expect(quote?.price).toBe(1339.7)
-    expect(quote?.previousClose).toBe(1328.4)
+    expect(quote?.previousClose).toBe(1325.4)
     expect(quote?.currency).toBe("INR")
     expect(quote?.source).toBe("yahoo")
     expect(quote?.stale).toBe(false)
     expect(quote?.asOf).toBe("2026-11-13T09:58:04.000Z")
+  })
+
+  it("falls back to chartPreviousClose when there is no close series", () => {
+    const quote = parseYahooChart(
+      {
+        chart: {
+          result: [
+            {
+              meta: {
+                currency: "USD",
+                regularMarketPrice: 200,
+                chartPreviousClose: 190,
+              },
+            },
+          ],
+        },
+      },
+      "AAPL"
+    )
+    expect(quote?.previousClose).toBe(190)
+    expect(quote?.currency).toBe("USD")
   })
 
   it("returns null for errors and malformed payloads", () => {

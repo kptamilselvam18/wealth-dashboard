@@ -4,7 +4,7 @@ import { yahooSymbol } from "./symbols"
 export function yahooChartUrl(symbol: string): string {
   return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol
-  )}?range=1d&interval=1d`
+  )}?range=5d&interval=1d`
 }
 
 type YahooChartResponse = {
@@ -18,6 +18,7 @@ type YahooChartResponse = {
         previousClose?: number
         regularMarketTime?: number
       }
+      indicators?: { quote?: Array<{ close?: Array<number | null> }> }
     }>
     error?: { code?: string; description?: string } | null
   }
@@ -30,12 +31,19 @@ export function parseYahooChart(payload: unknown, requestedSymbol: string): Mark
   const price = meta?.regularMarketPrice
   if (!meta || typeof price !== "number" || !Number.isFinite(price) || price <= 0) return null
 
+  // With intraday prices, `chartPreviousClose` can equal the current price, so
+  // prefer the second-to-last completed daily close when Yahoo provides it.
+  const closes = (data.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? []).filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value)
+  )
   const previousClose =
-    typeof meta.chartPreviousClose === "number"
-      ? meta.chartPreviousClose
-      : typeof meta.previousClose === "number"
-        ? meta.previousClose
-        : null
+    closes.length >= 2
+      ? closes[closes.length - 2]
+      : typeof meta.chartPreviousClose === "number"
+        ? meta.chartPreviousClose
+        : typeof meta.previousClose === "number"
+          ? meta.previousClose
+          : null
   const asOf = meta.regularMarketTime
     ? new Date(meta.regularMarketTime * 1000).toISOString()
     : new Date().toISOString()
