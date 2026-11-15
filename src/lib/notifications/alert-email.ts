@@ -21,8 +21,11 @@ export async function notifyPendingAlerts(userId: string): Promise<NotifyResult>
   if (!user) return { sent: 0, skipped: null }
   if (!user.emailAlerts) return { sent: 0, skipped: "opted-out" }
 
+  // Only recent events are emailed: if email is enabled later, old alerts should
+  // not suddenly arrive, while a provider outage still retries for a day.
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const events = await prisma.alertEvent.findMany({
-    where: { userId, notifiedAt: null },
+    where: { userId, notifiedAt: null, createdAt: { gte: since } },
     orderBy: { createdAt: "asc" },
     take: 50,
     include: { item: { select: { symbol: true } } },
