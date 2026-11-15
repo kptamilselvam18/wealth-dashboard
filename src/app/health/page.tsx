@@ -222,8 +222,8 @@ export default function FinancialHealthPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="border-0 bg-gradient-to-br from-primary to-primary/70 text-primary-foreground lg:col-span-2">
-          <CardContent className="flex flex-col items-start justify-between gap-6 pt-6 sm:flex-row sm:items-center">
+        <Card className="border-0 bg-gradient-to-br from-primary to-emerald-800 text-primary-foreground lg:col-span-2">
+          <CardContent className="flex h-full flex-col items-start justify-between gap-6 pt-6 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm font-medium opacity-90">Financial Health Score</p>
               <div className="mt-2 flex items-end gap-2">
@@ -235,10 +235,26 @@ export default function FinancialHealthPage() {
               <span className="mt-3 inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
                 {hasScore ? health.grade : "Not enough data yet"}
               </span>
-              <p className="mt-4 max-w-md text-xs opacity-85">
-                {measuredFactors.length} of {health.factors.length} factors measured ·{" "}
-                {Math.round(health.coverage * 100)}% of the score is backed by your data
-              </p>
+              <div className="mt-6 grid max-w-md grid-cols-3 gap-4 border-t border-white/15 pt-4 text-xs">
+                <div>
+                  <p className="opacity-75">Measured</p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {measuredFactors.length}/{health.factors.length} factors
+                  </p>
+                </div>
+                <div>
+                  <p className="opacity-75">Data coverage</p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {Math.round(health.coverage * 100)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="opacity-75">Top strength</p>
+                  <p className="mt-1 truncate text-sm font-semibold">
+                    {health.strengths[0] ?? "Not yet"}
+                  </p>
+                </div>
+              </div>
             </div>
             <ScoreRing score={hasScore ? health.score : null} />
           </CardContent>

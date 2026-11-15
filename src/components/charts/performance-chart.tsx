@@ -37,11 +37,19 @@ export function PerformanceChart({
     ? performance.filter((point) => new Date(point.date).getTime() >= cutoff)
     : performance
 
+  const sameDay =
+    new Set(filtered.map((point) => new Date(point.date).toDateString())).size <= 1
+
   const data = filtered.map((point) => ({
-    label: new Date(point.date).toLocaleDateString("en-IN", {
-      month: "short",
-      day: "numeric",
-    }),
+    label: sameDay
+      ? new Date(point.date).toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : new Date(point.date).toLocaleDateString("en-IN", {
+          month: "short",
+          day: "numeric",
+        }),
     value: Math.round(point.value),
     invested: Math.round(point.invested),
   }))
