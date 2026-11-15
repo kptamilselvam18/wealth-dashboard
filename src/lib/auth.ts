@@ -19,6 +19,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Google verifies email ownership. Allowing the link means a user
+            // who registered with a password can later use Google for the
+            // same address instead of hitting OAuthAccountNotLinked.
+            allowDangerousEmailAccountLinking: true,
+            authorization: { params: { prompt: "select_account" } },
           }),
         ]
       : []),

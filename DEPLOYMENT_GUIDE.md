@@ -33,8 +33,33 @@ Notes:
 - `NEXTAUTH_URL` / `NEXTAUTH_SECRET` are **not** used by NextAuth v5. The app sets
   `trustHost: true`, so it works on Vercel preview and production domains
   without extra host configuration.
-- For Google sign-in, add `https://<your-domain>/api/auth/callback/google` to the
-  authorised redirect URIs in Google Cloud Console.
+- Google sign-in is optional; see the setup section below.
+
+### Google sign-in setup
+
+1. Google Cloud Console → **APIs & Services → Credentials** → open the
+   **Web application** OAuth client used by this app.
+2. Under **Authorised redirect URIs**, add this exact value for each domain that
+   serves the app (scheme included, no trailing slash):
+   - `https://wealth-dashboard-khaki.vercel.app/api/auth/callback/google` (production)
+   - `http://localhost:3000/api/auth/callback/google` (local)
+   - Preview deployments use `https://<preview-domain>/api/auth/callback/google`;
+     add them one at a time or use a stable custom domain.
+3. Add the same origin under **Authorised JavaScript origins**.
+4. If the OAuth consent screen is in **Testing** mode, add your Google account as a
+   **test user**, or publish the app.
+5. Save, wait about a minute, then retry. The sign-in page shows the exact URI to
+   copy whenever Google reports a mismatch.
+
+Notes:
+
+- `redirect_uri_mismatch` is returned by Google before the app is reached. The
+  refused URI is in the `redirect_uri` query parameter of the error URL; it must
+  match a registered URI character for character (no `www`, no trailing slash).
+- The callback URL is derived from the request host (`trustHost: true`), so moving
+  to a custom domain requires adding that domain's callback URI too.
+- Google verifies email ownership, so an existing password account is linked when
+  the same address signs in with Google.
 
 ## 3. What the deploy does
 
@@ -110,6 +135,8 @@ automatically on the next deploy.
 | Login redirects back to `/auth/signin` | `AUTH_SECRET` missing or changed between deploys. |
 | Empty dashboard after login | Expected on a fresh database — add an investment or seed. |
 | Google button missing | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` not set; the app only registers the provider when both exist. |
+| `Error 400: redirect_uri_mismatch` | Google rejected the callback. Register the exact `https://<domain>/api/auth/callback/google` URI on the OAuth client (see the Google sign-in setup section). |
+| `OAuthAccountNotLinked` | An account with that email already exists. Sign in with the original method; Google sign-in links automatically when the address matches. |
 
 ## 8. Production notes
 

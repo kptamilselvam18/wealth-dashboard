@@ -1,8 +1,17 @@
 "use client"
 
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { CreditCard, Landmark, TrendingUp, Wallet } from "lucide-react"
+import {
+  Calculator,
+  CreditCard,
+  HeartPulse,
+  Landmark,
+  Target,
+  TrendingUp,
+  Wallet,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PageError, PageLoading } from "@/components/page-state"
@@ -13,28 +22,76 @@ import { RecentActivity } from "@/components/activity"
 import { AddInvestmentButton } from "@/components/add-investment"
 import { AddTransactionButton } from "@/components/add-transaction"
 import { formatCurrency, formatPercent } from "@/lib/format"
+import { cn } from "@/lib/utils"
+
+const QUICK_LINKS = [
+  { href: "/calculators", label: "Calculators", icon: Calculator },
+  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/health", label: "Financial Health", icon: HeartPulse },
+]
 
 function MetricCard({
   label,
   value,
   hint,
   icon,
-  className,
+  featured = false,
+  tone = "default",
 }: {
   label: string
   value: string
   hint: string
   icon: React.ReactNode
-  className: string
+  featured?: boolean
+  tone?: "default" | "positive" | "negative"
 }) {
   return (
-    <div className={`rounded-lg p-6 text-white shadow-sm ${className}`}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium opacity-90">{label}</p>
-        <span className="opacity-80">{icon}</span>
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border p-5",
+        featured
+          ? "border-transparent bg-gradient-to-br from-primary via-primary to-emerald-800 text-primary-foreground surface-lift"
+          : "border-border/80 bg-card surface-shadow"
+      )}
+    >
+      {featured && (
+        <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
+      )}
+      <div className="relative flex items-start justify-between gap-3">
+        <p
+          className={cn(
+            "text-sm font-medium",
+            featured ? "text-primary-foreground/85" : "text-muted-foreground"
+          )}
+        >
+          {label}
+        </p>
+        <span
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            featured
+              ? "bg-white/15 text-primary-foreground"
+              : tone === "positive"
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
+                : tone === "negative"
+                  ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
+                  : "bg-muted text-muted-foreground"
+          )}
+        >
+          {icon}
+        </span>
       </div>
-      <p className="mt-3 text-3xl font-bold tracking-tight">{value}</p>
-      <p className="mt-1 text-xs opacity-80">{hint}</p>
+      <p className="relative mt-3 text-[26px] font-semibold leading-tight tracking-tight tabular-nums">
+        {value}
+      </p>
+      <p
+        className={cn(
+          "relative mt-1 text-xs",
+          featured ? "text-primary-foreground/75" : "text-muted-foreground"
+        )}
+      >
+        {hint}
+      </p>
     </div>
   )
 }
@@ -49,13 +106,24 @@ export default function DashboardPage() {
     return <PageError message={error ?? "No portfolio data available"} />
   }
 
+  const today = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  })
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="mx-auto max-w-7xl animate-rise px-4 py-6 sm:py-8">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {session?.user?.name || "Investor"}
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            {today}
+          </p>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight">
+            Welcome back, {session?.user?.name?.split(" ")[0] || "Investor"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Here is how your money is doing today.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -64,38 +132,49 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 flex flex-wrap gap-2">
+        {QUICK_LINKS.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground surface-shadow"
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Net Worth"
+          label="Net worth"
           value={formatCurrency(summary.netWorth)}
-          hint={`Total assets ${formatCurrency(summary.totalAssets)}`}
-          icon={<Wallet className="h-5 w-5" />}
-          className="bg-gradient-to-br from-primary to-primary/70"
+          hint={`Assets ${formatCurrency(summary.totalAssets)}`}
+          icon={<Wallet className="h-4.5 w-4.5" />}
+          featured
         />
         <MetricCard
-          label="Total Investments"
+          label="Investments"
           value={formatCurrency(summary.totalCurrentValue)}
           hint={`Invested ${formatCurrency(summary.totalInvested)} · ${formatPercent(summary.overallReturn)}`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          className="bg-gradient-to-br from-emerald-600 to-emerald-700"
+          icon={<TrendingUp className="h-4.5 w-4.5" />}
+          tone="positive"
         />
         <MetricCard
-          label="Total Cash"
+          label="Cash available"
           value={formatCurrency(summary.totalCash)}
           hint="Savings and liquid balances"
-          icon={<Landmark className="h-5 w-5" />}
-          className="bg-gradient-to-br from-blue-600 to-blue-700"
+          icon={<Landmark className="h-4.5 w-4.5" />}
         />
         <MetricCard
-          label="Total Liabilities"
+          label="Liabilities"
           value={formatCurrency(summary.totalLiabilities)}
-          hint="Loans and debts"
-          icon={<CreditCard className="h-5 w-5" />}
-          className="bg-gradient-to-br from-red-600 to-red-700"
+          hint="Loans and outstanding debt"
+          icon={<CreditCard className="h-4.5 w-4.5" />}
+          tone="negative"
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PerformanceChart performance={summary.performance} />
         <AssetAllocationCard allocation={summary.allocation} />
       </div>
@@ -103,9 +182,9 @@ export default function DashboardPage() {
       <div className="mt-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+            <CardTitle className="text-base font-semibold">Recent activity</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => router.push("/transactions")}>
-              View All
+              View all
             </Button>
           </CardHeader>
           <CardContent>
