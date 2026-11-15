@@ -168,6 +168,15 @@ describe("financial health scoring", () => {
     expect(consistency?.status).toBe("unknown")
   })
 
+  it("exposes whole-number factor scores for display", () => {
+    const result = computeFinancialHealth(healthy)
+    for (const factor of result.factors) {
+      if (factor.score !== null) expect(Number.isInteger(factor.score)).toBe(true)
+    }
+    const diversification = result.factors.find((factor) => factor.id === "diversification")
+    expect(diversification?.score).toBe(86)
+  })
+
   it("lists strengths and focus areas from measured factors", () => {
     const result = computeFinancialHealth(healthy)
     expect(result.strengths).toContain("Emergency fund")
