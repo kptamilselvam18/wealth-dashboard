@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { toGoalView, type GoalRecord } from "./goals"
+import { formatGoalDate, toGoalView, type GoalRecord } from "./goals"
 
 const now = new Date("2026-01-01T00:00:00.000Z")
 
@@ -17,6 +17,14 @@ function goal(overrides: Partial<GoalRecord> = {}): GoalRecord {
     ...overrides,
   }
 }
+
+describe("goal dates", () => {
+  it("formats date-only targets without shifting the day", () => {
+    expect(formatGoalDate("2029-01-01T00:00:00.000Z")).toBe("1 Jan 2029")
+    expect(formatGoalDate("2026-08-15T00:00:00.000Z")).toContain("15 Aug 2026")
+    expect(formatGoalDate("not-a-date")).toBe("—")
+  })
+})
 
 describe("goal progress", () => {
   it("computes funded percentage and remaining amount", () => {

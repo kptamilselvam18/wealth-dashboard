@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { PageError, PageLoading } from "@/components/page-state"
 import { GoalDialog } from "@/components/goals/goal-dialog"
-import { formatCurrency, formatDate } from "@/lib/format"
-import { goalStatusLabel, type GoalView } from "@/lib/goals"
+import { formatCurrency } from "@/lib/format"
+import { formatGoalDate, goalStatusLabel, type GoalView } from "@/lib/goals"
 import { cn } from "@/lib/utils"
 
 function statusClass(status: string): string {
@@ -222,10 +222,10 @@ export default function GoalsPage() {
                     <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                       <CalendarClock className="h-3 w-3" />
                       {goal.monthsRemaining > 0
-                        ? `${goal.monthsRemaining} months to ${formatDate(goal.targetDate)}`
+                        ? `${goal.monthsRemaining} months to ${formatGoalDate(goal.targetDate)}`
                         : goal.remaining > 0
-                          ? `Target date passed (${formatDate(goal.targetDate)})`
-                          : `Reached on ${formatDate(goal.targetDate)}`}
+                          ? `Target date passed (${formatGoalDate(goal.targetDate)})`
+                          : `Reached on ${formatGoalDate(goal.targetDate)}`}
                     </p>
                   </div>
                   <span

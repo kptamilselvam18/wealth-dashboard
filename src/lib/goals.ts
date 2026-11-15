@@ -70,6 +70,22 @@ export function toGoalView(goal: GoalRecord, now: Date = new Date()): GoalView {
   }
 }
 
+const goalDateFormatter = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+})
+
+/**
+ * Target dates are date-only values stored at UTC midnight, so they must be
+ * formatted in UTC or they display a day earlier in western timezones.
+ */
+export function formatGoalDate(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? "—" : goalDateFormatter.format(date)
+}
+
 export function goalStatusLabel(status: string): string {
   switch (status) {
     case "COMPLETED":
