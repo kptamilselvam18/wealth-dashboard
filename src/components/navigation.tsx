@@ -7,6 +7,7 @@ import { signOut, useSession } from "next-auth/react"
 import {
   Calculator,
   HeartPulse,
+  Star,
   LayoutDashboard,
   LineChart,
   ListOrdered,
@@ -38,6 +39,7 @@ const groups = [
       { href: "/calculators", label: "Calculators", icon: Calculator },
       { href: "/goals", label: "Goals & Planning", icon: Target },
       { href: "/health", label: "Financial Health", icon: HeartPulse },
+      { href: "/watchlists", label: "Watchlists & Alerts", icon: Star },
     ],
   },
   {

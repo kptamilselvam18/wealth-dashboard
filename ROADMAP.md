@@ -25,7 +25,7 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 
 | Item | Status |
 | --- | --- |
-| Watchlists & alerts | ⬜ |
+| Watchlists & alerts | ✅ | Multiple watchlists, manual prices and clearly-labelled demo quotes, above/below/percentage-change rules with crossing detection, in-app alert history and read state. Delivery is pull-based (refresh/price update), no email or push yet. |
 | Financial progress timeline | ⬜ |
 | What-if simulator | ⬜ |
 | Portfolio allocation simulator | ⬜ |

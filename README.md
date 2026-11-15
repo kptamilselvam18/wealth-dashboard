@@ -10,6 +10,7 @@ A personal investment and net-worth tracker built with **Next.js 16 (App Router)
 - **Transactions** for buys, sells, SIPs, dividends, interest, deposits and withdrawals, with automatic holding updates
 - **Analytics** with top/under performers and a monthly investment trend chart
 - Cash balances and liabilities included in net worth
+- **Watchlists & alerts** — follow instruments with price-above, price-below and percentage-change alerts, manual price updates, and an in-app alert history (quotes are labelled demo data until a provider is connected)
 - **Financial Health** — transparent six-factor score with unknown-data handling, saved check-in history, and a milestone-based financial age
 - **Goals & planning** — create goals, record contributions, and see progress, months remaining, required monthly contribution and on-track status
 - **Calculator centre** — 20 deterministic calculators (SIP, step-up SIP, lumpsum, SWP, CAGR, EMI, prepayment, retirement, FIRE, goals, emergency fund, net worth, savings rate, average buy price, dividend yield, capital gains, inflation, expense-ratio drag) with charts, formulas, assumptions and CSV export

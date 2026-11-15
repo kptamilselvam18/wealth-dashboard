@@ -24,6 +24,8 @@ model User {
   liabilities   Liability[]  @relation("UserLiabilities")
   financialProfile  FinancialProfile?
   healthSnapshots   FinancialHealthSnapshot[] @relation("UserHealthSnapshots")
+  watchlists        Watchlist[] @relation("UserWatchlists")
+  alertEvents       AlertEvent[] @relation("UserAlertEvents")
 }
 
 model AssetType {
@@ -182,6 +184,71 @@ model FinancialProfile {
 
 // One saved check-in. Factors are frozen as JSON so historical scores can be
 // explained with the exact values that produced them.
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User @relation("UserWatchlists", fields: [userId], references: [id], onDelete: Cascade)
+  items     WatchlistItem[]
+
+  @@index([userId])
+}
+
+model WatchlistItem {
+  id          String   @id @default(cuid())
+  watchlistId String
+  symbol      String
+  name        String
+  exchange    String?
+  assetType   String   @default("stock")
+  currency    String   @default("INR")
+
+  // Last price we know about. `priceSource` records where it came from so the
+  // UI can label demo values instead of implying they are live market data.
+  price         Float?
+  previousPrice Float?
+  priceSource   String?
+  priceUpdatedAt DateTime?
+
+  alertAbove        Float?
+  alertBelow        Float?
+  alertChangePercent Float?
+
+  // Crossing state, so an alert fires once per crossing instead of every check.
+  aboveActive  Boolean @default(false)
+  belowActive  Boolean @default(false)
+  changeActive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  events    AlertEvent[]
+
+  @@unique([watchlistId, symbol])
+  @@index([watchlistId])
+}
+
+model AlertEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  type      String
+  price     Float
+  threshold Float?
+  message   String
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  user User          @relation("UserAlertEvents", fields: [userId], references: [id], onDelete: Cascade)
+  item WatchlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
 model FinancialHealthSnapshot {
   id           String   @id @default(cuid())
   userId       String
