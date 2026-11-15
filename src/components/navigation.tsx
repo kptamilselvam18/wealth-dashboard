@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
   Calculator,
+  HeartPulse,
   LayoutDashboard,
   LineChart,
   ListOrdered,
@@ -31,7 +32,10 @@ const groups = [
   },
   {
     label: "Tools",
-    items: [{ href: "/calculators", label: "Calculators", icon: Calculator }],
+    items: [
+      { href: "/calculators", label: "Calculators", icon: Calculator },
+      { href: "/health", label: "Financial Health", icon: HeartPulse },
+    ],
   },
   {
     label: "Account",

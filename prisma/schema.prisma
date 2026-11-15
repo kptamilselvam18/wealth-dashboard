@@ -22,6 +22,8 @@ model User {
   portfolioSnapshots PortfolioSnapshot[] @relation("UserPortfolioSnapshots")
   goals         Goal[]       @relation("UserGoals")
   liabilities   Liability[]  @relation("UserLiabilities")
+  financialProfile  FinancialProfile?
+  healthSnapshots   FinancialHealthSnapshot[] @relation("UserHealthSnapshots")
 }
 
 model AssetType {
@@ -162,4 +164,34 @@ enum LiabilityType {
   EDUCATION_LOAN
   HOME_LOAN
   OTHER
+}
+
+// Voluntary inputs used by the financial health score. Missing values stay
+// null so the score can treat the factor as unknown instead of poor.
+model FinancialProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  monthlyIncome   Float?
+  monthlyExpenses Float?
+  age             Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// One saved check-in. Factors are frozen as JSON so historical scores can be
+// explained with the exact values that produced them.
+model FinancialHealthSnapshot {
+  id           String   @id @default(cuid())
+  userId       String
+  score        Float
+  financialAge Float?
+  coverage     Float
+  factors      Json
+  createdAt    DateTime @default(now())
+
+  user         User @relation("UserHealthSnapshots", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
