@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { getQuotes, resolveProviderId } from "@/lib/market-data"
+import { notifyPendingAlerts } from "@/lib/notifications/alert-email"
 import {
   changePercent,
   evaluateAlerts,
@@ -122,6 +123,7 @@ export async function refreshWatchlistQuotes(
   updated: number
   triggered: number
   unavailable: number
+  notified: number
   provider: string
 }> {
   const provider = resolveProviderId()
@@ -134,7 +136,7 @@ export async function refreshWatchlistQuotes(
 
   const refreshable = items.filter((item) => item.priceSource !== "manual")
   if (refreshable.length === 0) {
-    return { updated: 0, triggered: 0, unavailable: 0, provider }
+    return { updated: 0, triggered: 0, unavailable: 0, notified: 0, provider }
   }
 
   const { quotes, unavailable } = await getQuotes(refreshable.map(quoteRequest))
@@ -178,7 +180,17 @@ export async function refreshWatchlistQuotes(
     ])
   }
 
-  return { updated, triggered, unavailable: unavailable.length, provider }
+  let notified = 0
+  if (triggered > 0) {
+    try {
+      notified = (await notifyPendingAlerts(userId)).sent
+    } catch (error) {
+      // Email is best-effort; alert recording must not fail because of it.
+      console.error("Alert notification failed:", error)
+    }
+  }
+
+  return { updated, triggered, unavailable: unavailable.length, notified, provider }
 }
 
 /** Fetch the first quote for a newly added item (never fabricates a price). */
@@ -192,7 +204,7 @@ export async function setManualPrice(
   userId: string,
   itemId: string,
   price: number
-): Promise<{ triggered: number }> {
+): Promise<{ triggered: number; notified: number }> {
   const item = await prisma.watchlistItem.findFirst({
     where: { id: itemId, watchlist: { userId } },
   })
@@ -229,7 +241,16 @@ export async function setManualPrice(
     ),
   ])
 
-  return { triggered: evaluation.triggers.length }
+  let notified = 0
+  if (evaluation.triggers.length > 0) {
+    try {
+      notified = (await notifyPendingAlerts(userId)).sent
+    } catch (error) {
+      console.error("Alert notification failed:", error)
+    }
+  }
+
+  return { triggered: evaluation.triggers.length, notified }
 }
 
 /**

@@ -17,10 +17,48 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [emailAlerts, setEmailAlerts] = useState(true)
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailMessage, setEmailMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setName(session?.user?.name ?? "")
   }, [session?.user?.name])
+
+  useEffect(() => {
+    if (status !== "authenticated") return
+    let cancelled = false
+    fetch("/api/profile")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((user) => {
+        if (!cancelled && user && typeof user.emailAlerts === "boolean") {
+          setEmailAlerts(user.emailAlerts)
+        }
+      })
+      .catch(() => null)
+    return () => {
+      cancelled = true
+    }
+  }, [status])
+
+  const handleEmailToggle = async (enabled: boolean) => {
+    setSavingEmail(true)
+    setEmailMessage(null)
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailAlerts: enabled }),
+      })
+      if (!response.ok) throw new Error("Could not save your email preference")
+      setEmailAlerts(enabled)
+      setEmailMessage(enabled ? "Alert emails are on" : "Alert emails are off")
+    } catch (error) {
+      setEmailMessage(error instanceof Error ? error.message : "Could not save your email preference")
+    } finally {
+      setSavingEmail(false)
+    }
+  }
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -118,6 +156,31 @@ export default function ProfilePage() {
         </Card>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Email alerts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-teal-700"
+                  checked={emailAlerts}
+                  disabled={savingEmail}
+                  onChange={(event) => handleEmailToggle(event.target.checked)}
+                />
+                <span>
+                  Email me when a watchlist alert fires
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    One digest per run, sent to {session?.user?.email}. Delivery depends on the
+                    site owner configuring an email provider; the in-app alert list always works.
+                  </span>
+                </span>
+              </label>
+              {emailMessage && <p className="text-xs text-muted-foreground">{emailMessage}</p>}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">Appearance</CardTitle>

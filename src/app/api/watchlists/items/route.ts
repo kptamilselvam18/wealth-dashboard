@@ -141,9 +141,9 @@ export async function PATCH(request: NextRequest) {
       if (!Number.isFinite(price) || price <= 0) {
         return NextResponse.json({ error: "Price must be greater than 0" }, { status: 400 })
       }
-      const { triggered } = await setManualPrice(session.user.id, id, price)
+      const { triggered, notified } = await setManualPrice(session.user.id, id, price)
       const updated = await prisma.watchlistItem.findUnique({ where: { id } })
-      return NextResponse.json({ item: updated ? toItemView(updated) : null, triggered })
+      return NextResponse.json({ item: updated ? toItemView(updated) : null, triggered, notified })
     }
 
     const data: {

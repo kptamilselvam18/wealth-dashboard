@@ -25,11 +25,12 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 
 | Item | Status |
 | --- | --- |
-| Watchlists & alerts | ✅ | Multiple watchlists, manual prices and clearly-labelled demo quotes, above/below/percentage-change rules with crossing detection, in-app alert history and read state. Delivery is pull-based (refresh/price update), no email or push yet. |
+| Watchlists & alerts | ✅ | Multiple watchlists, provider quotes or manual prices, above/below/percentage-change rules with crossing detection, in-app alert history and read state. Evaluated on manual refresh and the daily cron. |
 | Financial progress timeline | ⬜ |
 | What-if simulator | ⬜ |
 | Portfolio allocation simulator | ⬜ |
 | Market-data adapters, quote cache, scheduled alerts | ✅ | Yahoo Finance + MFAPI adapters behind a provider interface, DB-backed 15-minute cache with stale fallback, manual prices preserved, `/api/cron/alerts` with `CRON_SECRET` (daily schedule on Vercel Hobby) |
+| Email alert digests | ✅ | One digest per run via Brevo (free 300/day, verified sender without a domain), opt-out in Profile, unnotified events retried after provider failure; in-app alerts work without email configured |
 | Mutual fund / ETF tracking & NAV history | ⬜ | NAV quotes via MFAPI exist in watchlists; no fund pages or NAV history yet |
 | Fund overlap, fund and stock comparison | ⬜ |
 | Benchmark comparison, risk–return | ⬜ |
@@ -55,9 +56,12 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 
 ## Data providers
 
-No live market data is integrated yet. `/api/prices` serves **clearly labelled,
-deterministic mock prices** and manual price entry. A provider adapter layer with
-caching, staleness flags and per-source timestamps is required before any price
+Watchlists resolve quotes through `src/lib/market-data`: Yahoo Finance for
+stocks/ETFs/indices and MFAPI for Indian fund NAVs, cached in Postgres with
+per-source timestamps and stale fallback. `/api/prices` remains deterministic mock
+data. Yahoo is unofficial and delayed, so quotes are labelled and not
+investment-grade; manual prices are never overwritten. See `DEPLOYMENT_GUIDE.md`
+for provider limits and the optional Brevo email setup.
 is presented as real.
 
 ## Known limitations

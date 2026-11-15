@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     let updated = 0
     let triggered = 0
     let unavailable = 0
+    let notified = 0
     let failed = 0
 
     for (const { userId } of users) {
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
         updated += result.updated
         triggered += result.triggered
         unavailable += result.unavailable
+        notified += result.notified
       } catch (error) {
         failed += 1
         console.error("Scheduled alert evaluation failed for a user:", error)
@@ -62,6 +64,7 @@ export async function GET(request: NextRequest) {
         updated,
         triggered,
         unavailable,
+        notified,
         failed,
         evaluatedAt: new Date().toISOString(),
       },

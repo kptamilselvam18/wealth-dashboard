@@ -14,6 +14,9 @@ model User {
   image         String?
   googleId      String?
   passwordHash  String?
+  // Alert digests are opt-out; delivery also requires the server to be
+  // configured with an email provider.
+  emailAlerts   Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   assets        Asset[]      @relation("UserAssets")
@@ -259,11 +262,15 @@ model AlertEvent {
   message   String
   createdAt DateTime @default(now())
   readAt    DateTime?
+  // Set only after the digest containing this event was accepted for delivery,
+  // so a provider outage retries instead of silently dropping the alert.
+  notifiedAt DateTime?
 
   user User          @relation("UserAlertEvents", fields: [userId], references: [id], onDelete: Cascade)
   item WatchlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, notifiedAt])
 }
 
 model FinancialHealthSnapshot {

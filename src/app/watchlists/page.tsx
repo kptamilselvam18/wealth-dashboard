@@ -167,7 +167,9 @@ export default function WatchlistsPage() {
           payload?.updated === 1 ? "" : "s"
         } · ${payload?.triggered ?? 0} alert${payload?.triggered === 1 ? "" : "s"} fired · ${
           payload?.unavailable ?? 0
-        } unavailable`
+        } unavailable${
+          payload?.notified ? ` · ${payload.notified} email sent` : ""
+        }`
       )
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Could not refresh quotes")

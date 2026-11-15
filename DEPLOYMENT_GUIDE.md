@@ -26,6 +26,9 @@ Production (and Preview if you need previews to work):
 | `MARKET_DATA_PROVIDER` | No | `yahoo` (default) or `sample` for deterministic placeholders |
 | `QUOTE_TTL_SECONDS` | No | Quote cache lifetime, default `900` (fund NAVs use 6 hours) |
 | `CRON_SECRET` | No | Enables scheduled alert evaluation; without it `/api/cron/alerts` returns 503 |
+| `BREVO_API_KEY` | No | Enables email alert digests (Brevo free plan: 300 emails/day) |
+| `EMAIL_FROM` | No | Verified Brevo sender address; required with `BREVO_API_KEY` |
+| `EMAIL_FROM_NAME` | No | Sender display name, defaults to `Wealth Dashboard` |
 
 Notes:
 
@@ -84,6 +87,27 @@ Notes:
   evaluate daily; the watchlist "Refresh quotes" button evaluates on demand.
   More frequent scheduling needs Vercel Pro (~$20/month) or an external scheduler
   calling the same endpoint with the bearer secret.
+
+### Email alerts (optional)
+
+Alerts are always recorded in the in-app panel. Email is an additional channel,
+provided by **Brevo** because its free plan (300 emails/day) can send to any
+recipient from a **verified sender email address**, without owning a domain:
+
+1. Create a free Brevo account and verify the sender under
+   <https://app.brevo.com/senders> (they email you a confirmation code).
+2. Create an API key under SMTP & API → API keys (it starts with `xkeysib-`),
+   and add `BREVO_API_KEY`, `EMAIL_FROM` (the verified address) and optionally
+   `EMAIL_FROM_NAME` in Vercel → Settings → Environment Variables.
+3. Redeploy. The next refresh or cron run that fires an alert sends one digest
+   per user, then marks those events as notified so they are not re-sent.
+
+Users can opt out under **Profile → Email alerts**. Without `BREVO_API_KEY` and
+`EMAIL_FROM`, nothing is sent and refresh/cron still work. Sending is
+best-effort: a provider failure is logged and retried on the next run. Delivery
+limits, sender reputation and accepted-use policies are Brevo's; the app only
+sends alert digests. If you later own a domain, verifying it improves
+reputation — no code change is needed.
 
 ## 3. What the deploy does
 
