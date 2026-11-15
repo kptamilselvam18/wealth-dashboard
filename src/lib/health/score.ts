@@ -397,7 +397,9 @@ export function computeFinancialHealth(inputs: HealthInputs): HealthResult {
     diversificationFactor(inputs),
     goalsFactor(inputs),
     consistencyFactor(inputs),
-  ]
+  ].map((factor) =>
+    factor.score === null ? factor : { ...factor, score: Math.round(factor.score) }
+  )
 
   const measured = factors.filter((factor) => factor.score !== null)
   const totalWeight = factors.reduce((sum, factor) => sum + factor.weight, 0)

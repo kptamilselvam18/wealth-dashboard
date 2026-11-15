@@ -295,8 +295,12 @@ export default function FinancialHealthPage() {
                   <span className="min-w-0">
                     <span className="block font-medium">{milestone.label}</span>
                     <span className="block text-muted-foreground">
-                      {milestone.detail} · {milestone.status === "met" ? "+" : ""}
-                      {milestone.credit} yrs
+                      {milestone.detail} ·{" "}
+                      {milestone.status === "met"
+                        ? `+${milestone.credit} yrs`
+                        : milestone.status === "unknown"
+                          ? "not measured"
+                          : `+${milestone.credit} yrs when met`}
                     </span>
                   </span>
                 </li>
