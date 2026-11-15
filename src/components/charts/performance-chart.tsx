@@ -45,6 +45,7 @@ export function PerformanceChart({
       ? new Date(point.date).toLocaleTimeString("en-IN", {
           hour: "2-digit",
           minute: "2-digit",
+          second: "2-digit",
         })
       : new Date(point.date).toLocaleDateString("en-IN", {
           month: "short",
