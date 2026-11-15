@@ -12,6 +12,7 @@ export interface WatchlistItemRecord {
   price: number | null
   previousPrice: number | null
   priceSource: string | null
+  priceStale: boolean
   priceUpdatedAt: string | null
   alertAbove: number | null
   alertBelow: number | null
@@ -156,6 +157,8 @@ export function alertTypeLabel(type: string): string {
 
 export function priceSourceLabel(source: string | null): string {
   if (source === "manual") return "Manual price"
-  if (source === "demo") return "Demo quote"
+  if (source === "yahoo") return "Yahoo Finance"
+  if (source === "mfapi") return "MFAPI NAV"
+  if (source === "sample" || source === "demo") return "Sample data"
   return "No price"
 }

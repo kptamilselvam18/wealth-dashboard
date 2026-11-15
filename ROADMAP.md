@@ -29,7 +29,8 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 | Financial progress timeline | ⬜ |
 | What-if simulator | ⬜ |
 | Portfolio allocation simulator | ⬜ |
-| Mutual fund / ETF tracking & NAV history | ⬜ |
+| Market-data adapters, quote cache, scheduled alerts | ✅ | Yahoo Finance + MFAPI adapters behind a provider interface, DB-backed 15-minute cache with stale fallback, manual prices preserved, `/api/cron/alerts` with `CRON_SECRET` (daily schedule on Vercel Hobby) |
+| Mutual fund / ETF tracking & NAV history | ⬜ | NAV quotes via MFAPI exist in watchlists; no fund pages or NAV history yet |
 | Fund overlap, fund and stock comparison | ⬜ |
 | Benchmark comparison, risk–return | ⬜ |
 

@@ -18,6 +18,7 @@ function item(overrides: Partial<WatchlistItemRecord> = {}): WatchlistItemRecord
     price: 2800,
     previousPrice: 2700,
     priceSource: "manual",
+    priceStale: false,
     priceUpdatedAt: "2026-01-01T00:00:00.000Z",
     alertAbove: null,
     alertBelow: null,

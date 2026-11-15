@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
+import { getQuotes, resolveProviderId } from "@/lib/market-data"
 import {
   changePercent,
-  demoQuote,
   evaluateAlerts,
   type AlertEventView,
   type WatchlistItemRecord,
@@ -19,6 +19,7 @@ type ItemRow = {
   price: number | null
   previousPrice: number | null
   priceSource: string | null
+  priceStale: boolean
   priceUpdatedAt: Date | null
   alertAbove: number | null
   alertBelow: number | null
@@ -42,6 +43,7 @@ export function toItemView(item: ItemRow): WatchlistItemRecord {
     price: item.price,
     previousPrice: item.previousPrice,
     priceSource: item.priceSource,
+    priceStale: item.priceStale,
     priceUpdatedAt: item.priceUpdatedAt?.toISOString() ?? null,
     alertAbove: item.alertAbove,
     alertBelow: item.alertBelow,
@@ -54,9 +56,21 @@ export function toItemView(item: ItemRow): WatchlistItemRecord {
   }
 }
 
-export async function listWatchlists(
-  userId: string
-): Promise<{ watchlists: WatchlistView[]; events: AlertEventView[]; unread: number }> {
+function quoteRequest(item: ItemRow) {
+  return {
+    symbol: item.symbol,
+    assetType: item.assetType,
+    exchange: item.exchange,
+    currency: item.currency,
+  }
+}
+
+export async function listWatchlists(userId: string): Promise<{
+  watchlists: WatchlistView[]
+  events: AlertEventView[]
+  unread: number
+  meta: { provider: string }
+}> {
   const [watchlists, events, unread] = await Promise.all([
     prisma.watchlist.findMany({
       where: { userId },
@@ -93,18 +107,24 @@ export async function listWatchlists(
       readAt: event.readAt?.toISOString() ?? null,
     })),
     unread,
+    meta: { provider: resolveProviderId() },
   }
 }
 
 /**
- * Refresh demo quotes for a user's watchlist items and record any alert
- * crossings. Demo values are written with `priceSource: "demo"` so the UI can
- * always label them instead of implying live market data.
+ * Refresh quotes through the configured provider and record alert crossings.
+ * Manual prices are respected and never overwritten by a refresh.
  */
 export async function refreshWatchlistQuotes(
   userId: string,
   watchlistId?: string
-): Promise<{ updated: number; triggered: number }> {
+): Promise<{
+  updated: number
+  triggered: number
+  unavailable: number
+  provider: string
+}> {
+  const provider = resolveProviderId()
   const items = await prisma.watchlistItem.findMany({
     where: {
       watchlist: { userId },
@@ -112,20 +132,31 @@ export async function refreshWatchlistQuotes(
     },
   })
 
-  let triggered = 0
+  const refreshable = items.filter((item) => item.priceSource !== "manual")
+  if (refreshable.length === 0) {
+    return { updated: 0, triggered: 0, unavailable: 0, provider }
+  }
 
-  for (const item of items) {
-    const quote = demoQuote(item.symbol)
-    const evaluation = evaluateAlerts(item, quote.price, quote.previousPrice)
+  const { quotes, unavailable } = await getQuotes(refreshable.map(quoteRequest))
+  let triggered = 0
+  let updated = 0
+
+  for (const item of refreshable) {
+    const quote = quotes.get(item.symbol)
+    if (!quote) continue
+
+    const evaluation = evaluateAlerts(item, quote.price, quote.previousClose ?? item.previousPrice)
     triggered += evaluation.triggers.length
+    updated += 1
 
     await prisma.$transaction([
       prisma.watchlistItem.update({
         where: { id: item.id },
         data: {
           price: quote.price,
-          previousPrice: quote.previousPrice,
-          priceSource: "demo",
+          previousPrice: quote.previousClose,
+          priceSource: quote.source,
+          priceStale: quote.stale,
           priceUpdatedAt: new Date(),
           aboveActive: evaluation.aboveActive,
           belowActive: evaluation.belowActive,
@@ -147,7 +178,13 @@ export async function refreshWatchlistQuotes(
     ])
   }
 
-  return { updated: items.length, triggered }
+  return { updated, triggered, unavailable: unavailable.length, provider }
+}
+
+/** Fetch the first quote for a newly added item (never fabricates a price). */
+export async function initialQuoteForItem(item: ItemRow) {
+  const { quotes } = await getQuotes([quoteRequest(item)])
+  return quotes.get(item.symbol) ?? null
 }
 
 /** Set a manual price and evaluate alerts against it (fires on crossing). */
@@ -171,6 +208,7 @@ export async function setManualPrice(
         price,
         previousPrice,
         priceSource: "manual",
+        priceStale: false,
         priceUpdatedAt: new Date(),
         aboveActive: evaluation.aboveActive,
         belowActive: evaluation.belowActive,

@@ -40,6 +40,7 @@ type WatchlistData = {
   watchlists: WatchlistView[]
   events: AlertEventView[]
   unread: number
+  meta: { provider: string }
 }
 
 function ChangeBadge({ change }: { change: number | null }) {
@@ -162,9 +163,11 @@ export default function WatchlistsPage() {
       if (!response.ok) throw new Error(payload?.error ?? "Could not refresh quotes")
       await load()
       setNotice(
-        `Refreshed ${payload?.updated ?? 0} demo quote${
+        `Refreshed ${payload?.updated ?? 0} quote${
           payload?.updated === 1 ? "" : "s"
-        } · ${payload?.triggered ?? 0} alert${payload?.triggered === 1 ? "" : "s"} fired`
+        } · ${payload?.triggered ?? 0} alert${payload?.triggered === 1 ? "" : "s"} fired · ${
+          payload?.unavailable ?? 0
+        } unavailable`
       )
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Could not refresh quotes")
@@ -210,12 +213,22 @@ export default function WatchlistsPage() {
         </div>
       </div>
 
-      <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <div className="mb-5 flex items-start gap-2 rounded-xl border border-border/80 bg-card px-3 py-2 text-xs text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          Quotes here are <strong>deterministic demo values</strong>, not live market data. Enter a
-          manual price to evaluate alerts against a real figure you supply. No provider is
-          integrated yet.
+          {data?.meta.provider === "sample" ? (
+            <>
+              This deployment uses the <strong>sample provider</strong> (MARKET_DATA_PROVIDER=sample),
+              so prices are deterministic placeholders, not market data.
+            </>
+          ) : (
+            <>
+              Quotes come from <strong>Yahoo Finance</strong> and <strong>MFAPI</strong>, cached for
+              about 15 minutes (6 hours for fund NAVs). They can be delayed and are not
+              investment-grade — verify before acting. Failed lookups keep the last cached price
+              marked as stale, and never invent one.
+            </>
+          )}
         </p>
       </div>
 
@@ -323,7 +336,18 @@ export default function WatchlistsPage() {
                               </p>
                               <p className="text-[11px] text-muted-foreground">
                                 {priceSourceLabel(item.priceSource)}
+                                {item.priceStale ? " · cached" : ""}
                               </p>
+                              {item.priceUpdatedAt && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  {new Date(item.priceUpdatedAt).toLocaleString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              )}
                             </td>
                             <td className="p-3 text-right">
                               <ChangeBadge change={item.changePercent} />

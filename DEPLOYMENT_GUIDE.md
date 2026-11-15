@@ -23,6 +23,9 @@ Production (and Preview if you need previews to work):
 | `AUTH_SECRET` | Yes | `openssl rand -base64 32` |
 | `GOOGLE_CLIENT_ID` | No | Only needed for Google sign-in |
 | `GOOGLE_CLIENT_SECRET` | No | Only needed for Google sign-in |
+| `MARKET_DATA_PROVIDER` | No | `yahoo` (default) or `sample` for deterministic placeholders |
+| `QUOTE_TTL_SECONDS` | No | Quote cache lifetime, default `900` (fund NAVs use 6 hours) |
+| `CRON_SECRET` | No | Enables scheduled alert evaluation; without it `/api/cron/alerts` returns 503 |
 
 Notes:
 
@@ -60,6 +63,27 @@ Notes:
   to a custom domain requires adding that domain's callback URI too.
 - Google verifies email ownership, so an existing password account is linked when
   the same address signs in with Google.
+
+### Market data and scheduled alerts
+
+- Quotes are resolved through `src/lib/market-data`: **Yahoo Finance** for stocks,
+  ETFs and indices (NSE symbols get `.NS`, BSE gets `.BO`) and **MFAPI** for
+  Indian mutual fund NAVs (a numeric scheme code is required).
+- Every lookup is cached in the `QuoteCache` table for `QUOTE_TTL_SECONDS`
+  (default 15 minutes; fund NAVs 6 hours). Provider failures never invent a
+  price: the last cached value is served marked **cached/stale**, otherwise the
+  symbol is reported unavailable.
+- These are unofficial, key-free endpoints. They can change or rate-limit, and
+  their terms do not grant redistribution rights. The app labels the source and
+  is not investment-grade data. Manual prices are never overwritten by a refresh.
+- Scheduled evaluation lives at `GET /api/cron/alerts` and is registered in
+  `vercel.json` (`30 2 * * *`). Set `CRON_SECRET` in Vercel — Vercel Cron sends
+  it as `Authorization: Bearer $CRON_SECRET`, and the route returns 503 without a
+  configured secret, 401 with a wrong one.
+- Vercel Hobby only runs cron jobs **once per day**. On Hobby, alerts therefore
+  evaluate daily; the watchlist "Refresh quotes" button evaluates on demand.
+  More frequent scheduling needs Vercel Pro (~$20/month) or an external scheduler
+  calling the same endpoint with the bearer secret.
 
 ## 3. What the deploy does
 

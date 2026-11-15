@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { demoQuote } from "@/lib/watchlists"
-import { initialFlags, setManualPrice, toItemView } from "@/lib/watchlist-data"
+import { initialFlags, initialQuoteForItem, setManualPrice, toItemView } from "@/lib/watchlist-data"
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -73,30 +72,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `${symbol} is already in this watchlist` }, { status: 400 })
     }
 
-    const quote = demoQuote(symbol)
-    const flags = initialFlags(
-      { alertAbove, alertBelow, alertChangePercent },
-      quote.price,
-      quote.previousPrice
-    )
-
-    const item = await prisma.watchlistItem.create({
+    let item = await prisma.watchlistItem.create({
       data: {
         watchlistId,
         symbol,
         name,
         exchange,
         assetType,
-        price: quote.price,
-        previousPrice: quote.previousPrice,
-        priceSource: "demo",
-        priceUpdatedAt: new Date(),
         alertAbove,
         alertBelow,
         alertChangePercent,
-        ...flags,
       },
     })
+
+    // Best-effort first quote. If the provider is unreachable the item simply
+    // has no price until the user refreshes or enters one manually.
+    const quote = await initialQuoteForItem(item)
+    if (quote) {
+      item = await prisma.watchlistItem.update({
+        where: { id: item.id },
+        data: {
+          price: quote.price,
+          previousPrice: quote.previousClose,
+          priceSource: quote.source,
+          priceStale: quote.stale,
+          priceUpdatedAt: new Date(),
+          ...initialFlags(
+            { alertAbove, alertBelow, alertChangePercent },
+            quote.price,
+            quote.previousClose
+          ),
+        },
+      })
+    }
 
     await prisma.watchlist.update({
       where: { id: watchlistId },
