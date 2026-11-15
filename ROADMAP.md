@@ -19,6 +19,7 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 | CSV import | ⬜ | Next foundation item |
 | Budget, income & expense tracking | ⬜ | Schema models designed, UI pending |
 | Financial Health / Power Age v1 | ✅ | Six weighted factors, unknown-data handling, saved check-ins with history chart, optional income/expenses/age profile, milestone-based financial age |
+| Goals & planning | ✅ | Create, edit, archive and delete goals; record contributions; progress, months remaining, required monthly contribution and on-track status; feeds the Financial Health goal factor |
 
 ## Phase 2 — Investment insights
 

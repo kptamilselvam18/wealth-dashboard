@@ -8,6 +8,7 @@ import {
   Calculator,
   HeartPulse,
   LayoutDashboard,
+  Target,
   LineChart,
   ListOrdered,
   Menu,
@@ -34,6 +35,7 @@ const groups = [
     label: "Tools",
     items: [
       { href: "/calculators", label: "Calculators", icon: Calculator },
+      { href: "/goals", label: "Goals & Planning", icon: Target },
       { href: "/health", label: "Financial Health", icon: HeartPulse },
     ],
   },
