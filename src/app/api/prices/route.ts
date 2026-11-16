@@ -1,38 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getQuotes } from "@/lib/market-data"
+import { isFundType, quoteRequestFor } from "@/lib/portfolio-pricing"
 
-const MOCK_PRICES: Record<string, number> = {
-  RELIANCE: 2850.50,
-  TCS: 3850.75,
-  HDFCBANK: 1650.25,
-  INFY: 1550.80,
-  "HDFC.NS": 2650.40,
-  "RELIANCE.NS": 2850.50,
-  "HDFCFLEXI": 652.34,
-  "ICICIFLEXI": 589.12,
-  "SBIHYBRID": 412.56,
-  GOLD: 72500.00,
-  SILVER: 82500.00,
-  "SBI-FD": 6.8,
-  "HDFC-FD": 7.0,
-}
-
-function getMockPrice(symbol: string): number {
-  const normalizedSymbol = symbol.toUpperCase().replace(/\.NS$/, "").replace(/\.NSE$/, "")
-  const price = MOCK_PRICES[normalizedSymbol]
-  
-  if (price) return price
-  
-  let hash = 0
-  for (let i = 0; i < symbol.length; i++) {
-    hash = ((hash << 5) - hash) + symbol.charCodeAt(i)
-    hash |= 0
-  }
-  
-  return Math.abs(hash) % 9900 + 100
-}
-
+/**
+ * Live quote lookup by symbol. Returns unavailable symbols explicitly instead of
+ * inventing a price. `assetType=mutual-fund` resolves numeric MFAPI scheme codes.
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -42,30 +17,61 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const symbols = searchParams.get("symbols")
-
     if (!symbols) {
       return NextResponse.json({ error: "Symbols parameter is required" }, { status: 400 })
     }
 
-    const symbolArray = symbols.split(",").map(s => s.trim())
-    const prices: Record<string, { price: number; currency: string; timestamp: string }> = {}
+    const assetType = searchParams.get("assetType")?.trim() || "stock"
+    const list = symbols
+      .split(",")
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 50)
 
-    for (const symbol of symbolArray) {
-      const price = getMockPrice(symbol)
+    if (list.length === 0) {
+      return NextResponse.json({ error: "No valid symbols supplied" }, { status: 400 })
+    }
+
+    const { quotes, unavailable, provider } = await getQuotes(
+      list.map((symbol) => quoteRequestFor(symbol, assetType))
+    )
+
+    const prices: Record<
+      string,
+      {
+        price: number
+        previousClose: number | null
+        currency: string
+        source: string
+        timestamp: string
+        stale: boolean
+      }
+    > = {}
+
+    for (const symbol of list) {
+      const quote = quotes.get(symbol)
+      if (!quote) continue
       prices[symbol] = {
-        price,
-        currency: "INR",
-        timestamp: new Date().toISOString(),
+        price: quote.price,
+        previousClose: quote.previousClose,
+        currency: quote.currency,
+        source: quote.source,
+        timestamp: quote.asOf,
+        stale: quote.stale,
       }
     }
 
-    return NextResponse.json({ prices })
+    return NextResponse.json(
+      { prices, unavailable, provider, assetType: isFundType(assetType) ? "mutual-fund" : assetType },
+      { headers: { "Cache-Control": "no-store" } }
+    )
   } catch (error) {
     console.error("Error fetching prices:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
+/** Record a manual price for one of the user's assets. */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -73,38 +79,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { symbol, price, source = "manual" } = body
+    const body = await request.json().catch(() => null)
+    const symbol = typeof body?.symbol === "string" ? body.symbol.trim().toUpperCase() : ""
+    const price = Number(body?.price)
 
     if (!symbol) {
       return NextResponse.json({ error: "Symbol is required" }, { status: 400 })
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      return NextResponse.json({ error: "Price must be greater than 0" }, { status: 400 })
     }
 
     const asset = await prisma.asset.findFirst({
       where: { userId: session.user.id, symbol },
     })
-
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
 
-    const priceValue = price || getMockPrice(symbol)
-
     await prisma.priceHistory.create({
       data: {
         assetId: asset.id,
-        price: priceValue,
+        price,
         currency: "INR",
-        source,
+        source: "manual",
       },
     })
 
-    return NextResponse.json({
-      symbol,
-      price: priceValue,
-      currency: "INR",
-      timestamp: new Date().toISOString(),
-    }, { status: 201 })
+    return NextResponse.json(
+      {
+        symbol,
+        price,
+        currency: "INR",
+        source: "manual",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 201 }
+    )
   } catch (error) {
     console.error("Error recording price:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

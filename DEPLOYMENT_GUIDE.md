@@ -87,6 +87,10 @@ Notes:
   evaluate daily; the watchlist "Refresh quotes" button evaluates on demand.
   More frequent scheduling needs Vercel Pro (~$20/month) or an external scheduler
   calling the same endpoint with the bearer secret.
+- A second cron, `/api/cron/portfolio` (`30 3 * * *`), refreshes holding prices and
+  records daily portfolio snapshots. It uses the same `CRON_SECRET` guard and is
+  subject to the same once-a-day Hobby limit. Hobby allows two cron jobs; this
+  deployment uses both.
 
 ### Email alerts (optional)
 
@@ -188,8 +192,14 @@ automatically on the next deploy.
 
 ## 8. Production notes
 
-- Prices in `/api/prices` are a deterministic mock feed; replace with a real
-  market-data provider for live quotes.
-- Every holding/transaction write records a portfolio snapshot, which powers the
-  performance chart. Snapshots accumulate over time.
+- `/api/prices` serves live cached provider quotes; it no longer returns mock
+  values, and unavailable symbols are listed explicitly. Unsupported asset types
+  (cash, fixed deposits, gold/silver without a ticker) keep their last recorded
+  price.
+- Press **Refresh prices** on the dashboard or portfolio page to value every
+  holding with a symbol. The daily `/api/cron/portfolio` job does the same for up
+  to 50 users and appends a snapshot, so the performance chart reflects market
+  values over time.
+- Every holding/transaction write records a portfolio snapshot too. Snapshots
+  accumulate over time.
 - Auth sessions use JWTs, so no session table is required.

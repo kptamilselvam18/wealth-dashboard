@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { recordSnapshot } from "@/lib/portfolio"
+import { recordInitialQuote } from "@/lib/portfolio-pricing"
 import type { AssetOption } from "@/lib/summary-types"
 
 const CASH_TYPE = "cash"
@@ -153,6 +154,13 @@ export async function POST(request: NextRequest) {
 
       return { asset, holding }
     })
+
+    // Best-effort live quote so the new holding is valued at market immediately.
+    try {
+      await recordInitialQuote(result.asset.id, result.asset.symbol, assetType)
+    } catch (quoteError) {
+      console.error("Initial quote lookup failed:", quoteError)
+    }
 
     await recordSnapshot(userId)
 

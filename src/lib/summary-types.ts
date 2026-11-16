@@ -14,6 +14,8 @@ export type HoldingRow = {
   quantity: number
   averagePrice: number
   currentPrice: number
+  priceSource: string | null
+  priceAsOf: string | null
   invested: number
   currentValue: number
   pnl: number
@@ -61,6 +63,7 @@ export type Summary = {
   overallReturn: number
   allocation: AllocationSlice[]
   holdings: HoldingRow[]
+  pricesAsOf: string | null
   recentTransactions: TransactionRow[]
   performance: PerformancePoint[]
   monthlyInvestments: MonthlyPoint[]

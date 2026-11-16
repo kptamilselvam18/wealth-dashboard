@@ -10,6 +10,7 @@ import { PerformanceChart } from "@/components/charts/performance-chart"
 import { PortfolioTable } from "@/components/portfolio-table"
 import { AddInvestmentButton } from "@/components/add-investment"
 import { AddTransactionButton } from "@/components/add-transaction"
+import { RefreshPricesButton } from "@/components/refresh-prices"
 import { formatCurrency, formatPercent } from "@/lib/format"
 
 export default function PortfolioPage() {
@@ -27,8 +28,19 @@ export default function PortfolioPage() {
         <div>
           <h1 className="text-2xl font-bold">Portfolio</h1>
           <p className="text-muted-foreground">All your investments in one place</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {summary.pricesAsOf
+              ? `Prices last recorded ${new Date(summary.pricesAsOf).toLocaleString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}. Provider quotes can be delayed.`
+              : "No market prices recorded yet — add a symbol and refresh prices."}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-start gap-2">
+          <RefreshPricesButton />
           <AddInvestmentButton />
           <AddTransactionButton />
         </div>

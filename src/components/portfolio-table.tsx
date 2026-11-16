@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react"
 import { useSummary } from "@/components/summary-provider"
 import type { HoldingRow } from "@/lib/summary-types"
 import { formatCurrency, formatPercent, formatQuantity } from "@/lib/format"
+import { priceSourceLabel } from "@/lib/watchlists"
 
 export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
   const { refresh } = useSummary()
@@ -65,7 +66,20 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
                 <td className="p-3 text-center text-muted-foreground">{holding.type}</td>
                 <td className="p-3 text-right font-mono">{formatQuantity(holding.quantity)}</td>
                 <td className="p-3 text-right font-mono">{formatCurrency(holding.averagePrice)}</td>
-                <td className="p-3 text-right font-mono">{formatCurrency(holding.currentPrice)}</td>
+                <td className="p-3 text-right font-mono">
+                  {formatCurrency(holding.currentPrice)}
+                  {holding.type !== "Cash" && holding.priceSource && (
+                    <div className="font-sans text-[10px] font-normal text-muted-foreground">
+                      {priceSourceLabel(holding.priceSource)}
+                      {holding.priceAsOf
+                        ? ` · ${new Date(holding.priceAsOf).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}`
+                        : ""}
+                    </div>
+                  )}
+                </td>
                 <td className="p-3 text-right">{formatCurrency(holding.invested)}</td>
                 <td className="p-3 text-right font-mono">{formatCurrency(holding.currentValue)}</td>
                 <td

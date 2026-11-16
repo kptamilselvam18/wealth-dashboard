@@ -26,6 +26,7 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 | Item | Status |
 | --- | --- |
 | Watchlists & alerts | ✅ | Multiple watchlists, provider quotes or manual prices, above/below/percentage-change rules with crossing detection, in-app alert history and read state. Evaluated on manual refresh and the daily cron. |
+| Live portfolio valuation | ✅ | Holdings with a symbol priced from Yahoo Finance/MFAPI on demand and by the daily `/api/cron/portfolio` job; per-row source and price date; unsupported assets keep their recorded price; successful refreshes append performance snapshots |
 | Financial progress timeline | ⬜ |
 | What-if simulator | ⬜ |
 | Portfolio allocation simulator | ⬜ |
@@ -56,12 +57,13 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 
 ## Data providers
 
-Watchlists resolve quotes through `src/lib/market-data`: Yahoo Finance for
-stocks/ETFs/indices and MFAPI for Indian fund NAVs, cached in Postgres with
-per-source timestamps and stale fallback. `/api/prices` remains deterministic mock
-data. Yahoo is unofficial and delayed, so quotes are labelled and not
+Watchlists and portfolio holdings resolve quotes through `src/lib/market-data`:
+Yahoo Finance for stocks/ETFs/indices and MFAPI for Indian fund NAVs, cached in
+Postgres with per-source timestamps and stale fallback. `/api/prices` serves those
+live quotes (no mock feed) and refreshes write price history plus portfolio
+snapshots. Yahoo is unofficial and delayed, so quotes are labelled and not
 investment-grade; manual prices are never overwritten. See `DEPLOYMENT_GUIDE.md`
-for provider limits and the optional Brevo email setup.
+for provider limits, cron schedules and the optional Brevo email setup.
 is presented as real.
 
 ## Known limitations

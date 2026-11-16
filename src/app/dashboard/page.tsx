@@ -21,6 +21,7 @@ import { AssetAllocationCard } from "@/components/statcards/assets-allocation"
 import { RecentActivity } from "@/components/activity"
 import { AddInvestmentButton } from "@/components/add-investment"
 import { AddTransactionButton } from "@/components/add-transaction"
+import { RefreshPricesButton } from "@/components/refresh-prices"
 import { formatCurrency, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -126,7 +127,8 @@ export default function DashboardPage() {
             Here is how your money is doing today.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-start gap-2">
+          <RefreshPricesButton />
           <AddInvestmentButton />
           <AddTransactionButton />
         </div>

@@ -69,11 +69,12 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md). Vercel builds run
 | `/api/summary` | GET | Portfolio totals, allocation, holdings, history |
 | `/api/assets` | GET, POST, PUT, DELETE | Assets/holdings |
 | `/api/transactions` | GET, POST, DELETE | Transaction history (keeps holdings in sync) |
-| `/api/prices` | GET, POST | Manual/mock prices per symbol |
+| `/api/prices` | GET, POST | Live quotes by symbol; record a manual price |
+| `/api/prices/refresh` | POST | Price every quotable holding and snapshot the portfolio |
 | `/api/profile` | PATCH, DELETE | Update name, delete account |
 
 ## Notes
 
-- Prices come from a deterministic mock feed in `/api/prices`; wire in a real market-data provider for live quotes.
-- Portfolio snapshots are recorded whenever a holding or transaction changes, which powers the performance chart.
+- Holdings with a symbol are valued from Yahoo Finance (stocks/ETFs) or MFAPI (numeric fund codes) when you press **Refresh prices**, and by the daily `/api/cron/portfolio` job. Quotes are cached, delayed and labelled by source; unsupported assets (cash, fixed deposits, gold without a ticker) keep their recorded price and are reported as skipped.
+- Portfolio snapshots are recorded whenever a holding or transaction changes and after each successful price refresh, which powers the performance chart.
 - `prisma/seed.mjs` creates the demo user, eight holdings, monthly SIPs, two liabilities and twelve months of snapshots.

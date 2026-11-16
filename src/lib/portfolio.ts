@@ -80,11 +80,16 @@ export async function getPortfolioSummary(userId: string): Promise<Summary> {
   let totalInvested = 0
   let totalCurrentValue = 0
   let totalCash = 0
+  let pricesAsOf: Date | null = null
   const valuesByType: Record<string, number> = {}
   const rows: HoldingRow[] = []
 
   for (const holding of holdings) {
-    const currentPrice = holding.asset.priceHistory[0]?.price ?? holding.averagePrice
+    const latestPrice = holding.asset.priceHistory[0]
+    const currentPrice = latestPrice?.price ?? holding.averagePrice
+    if (latestPrice && (!pricesAsOf || latestPrice.date > pricesAsOf)) {
+      pricesAsOf = latestPrice.date
+    }
     const invested = holding.quantity * holding.averagePrice
     const currentValue = holding.quantity * currentPrice
     const isCash = holding.asset.assetType.name === CASH_TYPE
@@ -108,6 +113,8 @@ export async function getPortfolioSummary(userId: string): Promise<Summary> {
       quantity: holding.quantity,
       averagePrice: holding.averagePrice,
       currentPrice,
+      priceSource: latestPrice?.source ?? null,
+      priceAsOf: latestPrice?.date.toISOString() ?? null,
       invested,
       currentValue,
       pnl: calculateProfitLoss(currentValue, invested),
@@ -189,6 +196,7 @@ export async function getPortfolioSummary(userId: string): Promise<Summary> {
     allocation,
     holdings: rows,
     recentTransactions: transactions,
+    pricesAsOf: pricesAsOf?.toISOString() ?? null,
     performance,
     monthlyInvestments: months,
     topPerformers: performers.slice(0, 3),
