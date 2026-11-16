@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getQuotes } from "@/lib/market-data"
-import { isFundType, quoteRequestFor } from "@/lib/portfolio-pricing"
+import {
+  isFundType,
+  quoteRequestFor,
+  quoteSymbolCandidates,
+} from "@/lib/portfolio-pricing"
 
 /**
  * Live quote lookup by symbol. Returns unavailable symbols explicitly instead of
@@ -32,9 +36,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No valid symbols supplied" }, { status: 400 })
     }
 
-    const { quotes, unavailable, provider } = await getQuotes(
-      list.map((symbol) => quoteRequestFor(symbol, assetType))
+    // Indian tickers without an exchange suffix are tried as NSE first; Yahoo
+    // otherwise resolves e.g. INFY to its US ADR in USD.
+    const candidatesBySymbol = new Map(
+      list.map((symbol) => [
+        symbol,
+        isFundType(assetType) ? [symbol] : quoteSymbolCandidates(symbol),
+      ])
     )
+    const requests = [...candidatesBySymbol.values()].flat().map((candidate) =>
+      quoteRequestFor(candidate, assetType)
+    )
+    const { quotes, provider } = await getQuotes(requests)
+    const unavailable: string[] = []
 
     const prices: Record<
       string,
@@ -49,8 +63,13 @@ export async function GET(request: NextRequest) {
     > = {}
 
     for (const symbol of list) {
-      const quote = quotes.get(symbol)
-      if (!quote) continue
+      const quote = (candidatesBySymbol.get(symbol) ?? [])
+        .map((candidate) => quotes.get(candidate))
+        .find((candidate) => candidate !== undefined)
+      if (!quote) {
+        unavailable.push(symbol)
+        continue
+      }
       prices[symbol] = {
         price: quote.price,
         previousClose: quote.previousClose,

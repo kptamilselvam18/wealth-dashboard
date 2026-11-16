@@ -87,12 +87,13 @@ export async function getPortfolioSummary(userId: string): Promise<Summary> {
   for (const holding of holdings) {
     const latestPrice = holding.asset.priceHistory[0]
     const currentPrice = latestPrice?.price ?? holding.averagePrice
-    if (latestPrice && (!pricesAsOf || latestPrice.date > pricesAsOf)) {
-      pricesAsOf = latestPrice.date
-    }
     const invested = holding.quantity * holding.averagePrice
     const currentValue = holding.quantity * currentPrice
     const isCash = holding.asset.assetType.name === CASH_TYPE
+
+    if (!isCash && latestPrice && (!pricesAsOf || latestPrice.date > pricesAsOf)) {
+      pricesAsOf = latestPrice.date
+    }
 
     if (isCash) {
       totalCash += currentValue
@@ -207,15 +208,27 @@ export async function getPortfolioSummary(userId: string): Promise<Summary> {
 /** Store the current portfolio value so the performance chart has real history. */
 export async function recordSnapshot(userId: string): Promise<void> {
   const summary = await getPortfolioSummary(userId)
-  await prisma.portfolioSnapshot.create({
-    data: {
-      userId,
-      totalValue: summary.totalCurrentValue + summary.totalCash,
-      investedValue: summary.totalInvested,
-      pnl: summary.totalPnl,
-      netWorth: summary.netWorth,
-    },
+  const data = {
+    totalValue: summary.totalCurrentValue + summary.totalCash,
+    investedValue: summary.totalInvested,
+    pnl: summary.totalPnl,
+    netWorth: summary.netWorth,
+  }
+
+  // One snapshot per calendar day: refreshing prices or editing a holding should
+  // refine today's value, not clutter the performance chart with intraday noise.
+  const startOfDay = new Date()
+  startOfDay.setUTCHours(0, 0, 0, 0)
+  const existing = await prisma.portfolioSnapshot.findFirst({
+    where: { userId, date: { gte: startOfDay } },
+    orderBy: { date: "desc" },
   })
+
+  if (existing) {
+    await prisma.portfolioSnapshot.update({ where: { id: existing.id }, data })
+  } else {
+    await prisma.portfolioSnapshot.create({ data: { userId, ...data } })
+  }
 }
 
 export { calculateReturn, calculateProfitLoss, calculateNetWorth }
