@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSummary } from "@/components/summary-provider"
 import { cn } from "@/lib/utils"
 
 export function RefreshPricesButton({ className }: { className?: string }) {
-  const { refresh } = useSummary()
+  const { summary, refresh } = useSummary()
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +23,9 @@ export function RefreshPricesButton({ className }: { className?: string }) {
       await refresh()
       setNotice(
         `Updated ${payload?.updated ?? 0} holding${payload?.updated === 1 ? "" : "s"}${
-          payload?.unavailable ? ` · ${payload.unavailable} without a market price` : ""
+          payload?.unavailable
+            ? ` · no quote for ${(payload.unavailableSymbols ?? []).join(", ")}`
+            : ""
         }`
       )
     } catch (refreshError) {
@@ -32,6 +34,23 @@ export function RefreshPricesButton({ className }: { className?: string }) {
       setBusy(false)
     }
   }
+
+  // Automatically value holdings when quotes are missing or older than the
+  // cache window, so a newly added investment gets a live price without a click.
+  const autoRan = useRef(false)
+  useEffect(() => {
+    if (autoRan.current || !summary || busy) return
+    const priced = summary.holdings.some(
+      (holding) => holding.type !== "Cash" && Boolean(holding.symbol)
+    )
+    if (!priced) return
+    const asOf = summary.pricesAsOf ? new Date(summary.pricesAsOf).getTime() : 0
+    const stale = !asOf || Date.now() - asOf > 15 * 60 * 1000
+    if (!stale) return
+    autoRan.current = true
+    void handleRefresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary])
 
   return (
     <div className={cn("flex flex-col items-start gap-1", className)}>

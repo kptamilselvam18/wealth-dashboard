@@ -85,6 +85,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if ((assetType === "stock" || assetType === "mutual-fund") && !symbol) {
+      return NextResponse.json(
+        {
+          error:
+            assetType === "mutual-fund"
+              ? "A numeric fund scheme code is required to fetch NAV"
+              : "A symbol is required to fetch a live price",
+        },
+        { status: 400 }
+      )
+    }
+
     if (!Number.isFinite(quantity) || quantity <= 0) {
       return NextResponse.json({ error: "Quantity must be greater than 0" }, { status: 400 })
     }

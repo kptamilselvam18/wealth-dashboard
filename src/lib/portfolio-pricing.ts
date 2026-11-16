@@ -78,6 +78,7 @@ async function resolveQuote(
 export async function refreshPortfolioPrices(userId: string): Promise<{
   updated: number
   unavailable: number
+  unavailableSymbols: string[]
   skipped: number
   assets: number
   provider: string
@@ -104,9 +105,13 @@ export async function refreshPortfolioPrices(userId: string): Promise<{
   const provider = resolveProviderId()
 
   let updated = 0
+  const unavailableSymbols: string[] = []
   for (const asset of quoteable) {
     const resolved = await resolveQuote(asset)
-    if (!resolved) continue
+    if (!resolved) {
+      unavailableSymbols.push(asset.symbol as string)
+      continue
+    }
     await prisma.priceHistory.create({
       data: {
         assetId: asset.id,
@@ -125,7 +130,8 @@ export async function refreshPortfolioPrices(userId: string): Promise<{
 
   return {
     updated,
-    unavailable: quoteable.length - updated,
+    unavailable: unavailableSymbols.length,
+    unavailableSymbols,
     skipped,
     assets: assets.size,
     provider,

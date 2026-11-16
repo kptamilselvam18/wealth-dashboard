@@ -44,6 +44,7 @@ export function AddInvestmentButton() {
   const [saving, setSaving] = React.useState(false)
 
   const isCash = assetType === "cash"
+  const needsSymbol = assetType === "stock" || assetType === "mutual-fund"
 
   const reset = () => {
     setName("")
@@ -73,6 +74,13 @@ export function AddInvestmentButton() {
       }
 
       if (!payload.name) throw new Error("Enter a name for this asset")
+      if (needsSymbol && !payload.symbol) {
+        throw new Error(
+          assetType === "mutual-fund"
+            ? "Enter the numeric fund scheme code (e.g. 120503) so NAV can be fetched"
+            : "Enter the exchange ticker (e.g. RELIANCE for NSE) so a live price can be fetched"
+        )
+      }
       if (!Number.isFinite(payload.quantity) || payload.quantity <= 0) {
         throw new Error(isCash ? "Enter the cash amount" : "Quantity must be greater than 0")
       }
@@ -144,13 +152,27 @@ export function AddInvestmentButton() {
 
           {!isCash && (
             <div className="space-y-1.5">
-              <Label htmlFor="symbol">Symbol / Ticker (optional)</Label>
+              <Label htmlFor="symbol">
+                {assetType === "mutual-fund" ? "Scheme code" : "Symbol / Ticker"}
+                {needsSymbol ? " (required for live prices)" : " (optional)"}
+              </Label>
               <Input
                 id="symbol"
                 value={symbol}
                 onChange={(event) => setSymbol(event.target.value)}
-                placeholder="e.g., RELIANCE"
+                placeholder={
+                  assetType === "mutual-fund"
+                    ? "e.g., 120503 (MFAPI scheme code)"
+                    : "e.g., RELIANCE (NSE) or TCS.BO"
+                }
+                required={needsSymbol}
               />
+              {assetType === "mutual-fund" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Indian mutual funds need the numeric MFAPI scheme code; a fund name cannot be
+                  priced.
+                </p>
+              )}
             </div>
           )}
 

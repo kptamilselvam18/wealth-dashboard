@@ -68,10 +68,12 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
                 <td className="p-3 text-right font-mono">{formatCurrency(holding.averagePrice)}</td>
                 <td className="p-3 text-right font-mono">
                   {formatCurrency(holding.currentPrice)}
-                  {holding.type !== "Cash" && holding.priceSource && (
+                  {holding.type !== "Cash" && (
                     <div className="font-sans text-[10px] font-normal text-muted-foreground">
-                      {priceSourceLabel(holding.priceSource)}
-                      {holding.priceAsOf
+                      {holding.priceSource
+                        ? priceSourceLabel(holding.priceSource)
+                        : "No market price"}
+                      {holding.priceSource && holding.priceAsOf
                         ? ` · ${new Date(holding.priceAsOf).toLocaleDateString("en-IN", {
                             day: "numeric",
                             month: "short",
