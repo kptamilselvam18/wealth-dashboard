@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown } from "lucide-react"
+import { formatPercent } from "@/lib/format"
 
 interface StatCardProps {
   title: string
@@ -24,7 +25,7 @@ export function StatCard({ title, value, change, changeLabel }: StatCardProps) {
               <TrendingDown className="h-4 w-4 text-red-600" />
             )}
             <span className={change >= 0 ? "text-green-600" : "text-red-600"}>
-              {change >= 0 ? "+" : ""}{change}%
+              {formatPercent(change)}
             </span>
             {changeLabel && <span className="text-muted-foreground">{changeLabel}</span>}
           </div>
