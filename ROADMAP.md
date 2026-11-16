@@ -32,7 +32,8 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started
 | Portfolio allocation simulator | ⬜ |
 | Market-data adapters, quote cache, scheduled alerts | ✅ | Yahoo Finance + MFAPI adapters behind a provider interface, DB-backed 15-minute cache with stale fallback, manual prices preserved, `/api/cron/alerts` with `CRON_SECRET` (daily schedule on Vercel Hobby) |
 | Email alert digests | ✅ | One digest per run via Brevo (free 300/day, verified sender without a domain), opt-out in Profile, unnotified events retried after provider failure; in-app alerts work without email configured |
-| Mutual fund / ETF tracking & NAV history | ⬜ | NAV quotes via MFAPI exist in watchlists; no fund pages or NAV history yet |
+| Mutual fund search & scheme codes | ✅ | Name search via MFAPI in the add-investment form fills the name and numeric scheme code; NAV quotes flow into portfolio valuation |
+| Mutual fund / ETF tracking & NAV history | ⬜ | NAV quotes via MFAPI exist in watchlists and portfolios; no fund pages or NAV history yet |
 | Fund overlap, fund and stock comparison | ⬜ |
 | Benchmark comparison, risk–return | ⬜ |
 

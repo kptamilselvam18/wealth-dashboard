@@ -42,6 +42,12 @@ export function AddInvestmentButton() {
   const [notes, setNotes] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const [fundQuery, setFundQuery] = React.useState("")
+  const [fundResults, setFundResults] = React.useState<
+    { schemeCode: string; schemeName: string }[]
+  >([])
+  const [fundSearching, setFundSearching] = React.useState(false)
+  const [fundError, setFundError] = React.useState<string | null>(null)
 
   const isCash = assetType === "cash"
   const needsSymbol = assetType === "stock" || assetType === "mutual-fund"
@@ -55,6 +61,34 @@ export function AddInvestmentButton() {
     setNotes("")
     setDate(today())
     setError(null)
+    setFundQuery("")
+    setFundResults([])
+    setFundError(null)
+  }
+
+  const handleFundSearch = async () => {
+    const query = fundQuery.trim()
+    if (query.length < 2) {
+      setFundError("Enter at least 2 characters of the fund name")
+      return
+    }
+    setFundSearching(true)
+    setFundError(null)
+    setFundResults([])
+    try {
+      const response = await fetch(`/api/funds/search?q=${encodeURIComponent(query)}`)
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(payload?.error ?? "Could not search funds")
+      const results = (payload?.results ?? []) as { schemeCode: string; schemeName: string }[]
+      setFundResults(results)
+      if (results.length === 0) setFundError("No schemes matched — try a shorter name")
+    } catch (searchError) {
+      setFundError(
+        searchError instanceof Error ? searchError.message : "Could not search funds"
+      )
+    } finally {
+      setFundSearching(false)
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -138,6 +172,60 @@ export function AddInvestmentButton() {
               ))}
             </Select>
           </div>
+
+          {assetType === "mutual-fund" && (
+            <div className="space-y-2 rounded-xl border border-border/80 bg-muted/30 p-3">
+              <Label htmlFor="fundSearch">Find fund by name</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="fundSearch"
+                  value={fundQuery}
+                  onChange={(event) => setFundQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      void handleFundSearch()
+                    }
+                  }}
+                  placeholder="e.g., Axis ELSS"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleFundSearch}
+                  disabled={fundSearching}
+                >
+                  {fundSearching ? "Searching..." : "Search"}
+                </Button>
+              </div>
+              {fundError && <p className="text-xs text-destructive">{fundError}</p>}
+              {fundResults.length > 0 && (
+                <ul className="max-h-44 space-y-1 overflow-y-auto">
+                  {fundResults.map((result) => (
+                    <li key={result.schemeCode}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setName(result.schemeName.slice(0, 80))
+                          setSymbol(result.schemeCode)
+                          setFundResults([])
+                          setFundError(null)
+                        }}
+                        className="w-full rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent"
+                      >
+                        <span className="font-medium">{result.schemeName}</span>
+                        <span className="ml-1 text-muted-foreground">{result.schemeCode}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Search MFAPI&apos;s scheme list; choosing a result fills the name and scheme
+                code.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="name">{isCash ? "Account Name" : "Name"}</Label>

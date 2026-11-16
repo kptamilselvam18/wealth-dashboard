@@ -71,6 +71,7 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md). Vercel builds run
 | `/api/transactions` | GET, POST, DELETE | Transaction history (keeps holdings in sync) |
 | `/api/prices` | GET, POST | Live quotes by symbol; record a manual price |
 | `/api/prices/refresh` | POST | Price every quotable holding and snapshot the portfolio |
+| `/api/funds/search` | GET | Search mutual fund schemes by name and return MFAPI scheme codes |
 | `/api/profile` | PATCH, DELETE | Update name, delete account |
 
 ## Notes
