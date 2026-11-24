@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { ExportButton } from "@/components/export-button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectItem } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageError, PageLoading } from "@/components/page-state"
 import { useSummary } from "@/components/summary-provider"
@@ -16,6 +19,9 @@ import { formatCurrency, formatPercent } from "@/lib/format"
 export default function PortfolioPage() {
   const { summary, loading, error } = useSummary()
   const [timeRange, setTimeRange] = useState("ALL")
+  const [query, setQuery] = useState("")
+  const [assetType, setAssetType] = useState("ALL")
+  const [sort, setSort] = useState("value")
 
   if (loading) return <PageLoading />
   if (error || !summary) {
@@ -40,6 +46,7 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-start gap-2">
+          <ExportButton type="holdings" />
           <RefreshPricesButton />
           <AddInvestmentButton />
           <AddTransactionButton />
@@ -71,7 +78,12 @@ export default function PortfolioPage() {
           <CardTitle className="text-base font-semibold">Holdings</CardTitle>
         </CardHeader>
         <CardContent>
-          <PortfolioTable holdings={summary.holdings} />
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <Input aria-label="Search holdings" placeholder="Search name or symbol..." value={query} onChange={e => setQuery(e.target.value)} />
+            <Select aria-label="Filter asset type" value={assetType} onValueChange={setAssetType}><SelectItem value="ALL">All asset types</SelectItem>{Array.from(new Set(summary.holdings.map(h => h.type))).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</Select>
+            <Select aria-label="Sort holdings" value={sort} onValueChange={setSort}><SelectItem value="value">Highest value</SelectItem><SelectItem value="return">Highest return</SelectItem><SelectItem value="name">Name A–Z</SelectItem></Select>
+          </div>
+          <PortfolioTable holdings={summary.holdings.filter(h => (assetType === "ALL" || h.type === assetType) && `${h.name} ${h.symbol ?? ""}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "return" ? b.returnPercent - a.returnPercent : b.currentValue - a.currentValue)} />
         </CardContent>
       </Card>
     </div>

@@ -3,13 +3,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f6f7f4;
+  --background: #f4f6f9;
   --foreground: #0b1220;
   --card: #ffffff;
   --card-foreground: #0b1220;
   --popover: #ffffff;
   --popover-foreground: #0b1220;
-  --primary: #0f766e;
+  --primary: #176b57;
   --primary-foreground: #ffffff;
   --secondary: #eef2ed;
   --secondary-foreground: #0b1220;
@@ -19,10 +19,10 @@
   --accent-foreground: #0b1220;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e5e8e1;
+  --border: #e3e8ee;
   --input: #dfe3dc;
   --ring: #0f766e;
-  --radius: 0.85rem;
+  --radius: 1rem;
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 28px -18px rgba(15, 23, 42, 0.28);
   --shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.05), 0 18px 36px -20px rgba(15, 23, 42, 0.35);
 }
@@ -98,6 +98,24 @@ body {
     Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; color: var(--muted-foreground); }
+.skip-link { position: fixed; top: -100px; left: 20px; z-index: 100; padding: 12px 20px; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); }
+.skip-link:focus { top: 12px; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), select { cursor: pointer; }
+input, select { min-height: 42px; }
+main h1 { letter-spacing: -.035em; }
+table { font-variant-numeric: tabular-nums; border-collapse: collapse; }
+thead { background: color-mix(in srgb, var(--muted) 70%, transparent); }
+tbody tr:last-child { border-bottom: 0; }
+@media (min-width: 1024px) { .workspace-header { position: sticky; top: 0; z-index: 30; } }
+@media print {
+  aside, .workspace-header, button, .skip-link { display: none !important; }
+  main, main > div { padding: 0 !important; }
+  body { background: white; color: black; }
 }
 
 ::selection {

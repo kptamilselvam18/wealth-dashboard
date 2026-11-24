@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type DialogContextValue = {
   open: boolean
   setOpen: (open: boolean) => void
+  titleId: string
 }
 
 const DialogContext = React.createContext<DialogContextValue | null>(null)
@@ -20,9 +22,13 @@ export function Dialog({
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }) {
+  const titleId = React.useId()
+  const changeRef = React.useRef(onOpenChange)
+  React.useEffect(() => { changeRef.current = onOpenChange }, [onOpenChange])
+  const setOpen = React.useCallback((next: boolean) => changeRef.current(next), [])
   const value = React.useMemo(
-    () => ({ open, setOpen: onOpenChange }),
-    [open, onOpenChange]
+    () => ({ open, setOpen, titleId }),
+    [open, setOpen, titleId]
   )
   return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>
 }
@@ -46,16 +52,25 @@ export function DialogContent({
 }) {
   const context = React.useContext(DialogContext)
   const open = Boolean(context?.open)
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = React.useSyncExternalStore(() => () => {}, () => true, () => false)
+  const panel = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     if (!open || !context) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    const focusFrame = requestAnimationFrame(() => {
+      const first = panel.current?.querySelector<HTMLElement>('input, select, textarea, button, a[href], [tabindex="0"]')
+      ;(first ?? panel.current)?.focus()
+    })
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") context.setOpen(false)
+      if (event.key === "Tab") {
+        const items = Array.from(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? []).filter(item => item.getClientRects().length)
+        const first = items[0], last = items[items.length - 1]
+        if (!first) { event.preventDefault(); panel.current?.focus(); return }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }
     }
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -63,12 +78,14 @@ export function DialogContent({
     return () => {
       document.body.style.overflow = previousOverflow
       document.removeEventListener("keydown", handleKeyDown)
+      cancelAnimationFrame(focusFrame)
+      previousFocus?.focus()
     }
   }, [open, context])
 
   if (!mounted || !context?.open) return null
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={() => context.setOpen(false)}
@@ -76,6 +93,9 @@ export function DialogContent({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={context.titleId}
+        ref={panel}
+        tabIndex={-1}
         className={cn(
           "relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border bg-card p-6 shadow-xl",
           className
@@ -92,7 +112,7 @@ export function DialogContent({
         </button>
         {children}
       </div>
-    </div>
+    </div>, document.body
   )
 }
 
@@ -101,7 +121,8 @@ export function DialogHeader({ children }: { children: React.ReactNode }) {
 }
 
 export function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-lg font-semibold">{children}</h3>
+  const context = React.useContext(DialogContext)
+  return <h3 id={context?.titleId} className="text-lg font-semibold">{children}</h3>
 }
 
 export function DialogDescription({ children }: { children: React.ReactNode }) {

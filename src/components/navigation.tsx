@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
   Calculator,
+  CreditCard,
   HeartPulse,
   Star,
   LayoutDashboard,
@@ -30,6 +31,7 @@ const groups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/portfolio", label: "My Portfolio", icon: PieChart },
       { href: "/transactions", label: "Transactions", icon: ListOrdered },
+      { href: "/liabilities", label: "Debts & liabilities", icon: CreditCard },
       { href: "/analytics", label: "Analytics", icon: LineChart },
     ],
   },
@@ -55,7 +57,7 @@ function Brand() {
         W
       </span>
       <span className="flex flex-col leading-none">
-        <span className="text-[15px] font-semibold tracking-tight">Wealth</span>
+        <span className="text-[17px] font-semibold tracking-tight">Wealth<span className="text-primary">.</span></span>
         <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Dashboard
         </span>
@@ -82,11 +84,12 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   onClick={onNavigate}
                   className={cn(
                     "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -96,7 +99,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                   <Icon
                     className={cn(
                       "h-4 w-4 transition-transform group-hover:scale-105",
-                      isActive ? "text-primary" : undefined
+                      isActive ? "text-primary-foreground" : undefined
                     )}
                   />
                   {item.label}

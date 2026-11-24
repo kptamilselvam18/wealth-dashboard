@@ -1,9 +1,11 @@
+"use client"
 import { AlertCircle, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export function PageLoading({ label = "Loading your portfolio..." }: { label?: string }) {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
+    <div role="status" aria-live="polite" className="flex min-h-[60vh] items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm">{label}</p>
@@ -21,6 +23,7 @@ export function PageError({ message }: { message: string }) {
           <div>
             <p className="font-medium">Something went wrong</p>
             <p className="text-sm text-muted-foreground">{message}</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.reload()}>Try again</Button>
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useSummary } from "@/components/summary-provider"
 import type { HoldingRow } from "@/lib/summary-types"
 import { formatCurrency, formatPercent, formatQuantity } from "@/lib/format"
@@ -11,6 +15,19 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
   const { refresh } = useSummary()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<HoldingRow | null>(null)
+  const [quantity, setQuantity] = useState("")
+  const [averagePrice, setAveragePrice] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState("")
+  async function save(event: React.FormEvent) {
+    event.preventDefault(); setSaving(true); setSaveError("")
+    try {
+      const response = await fetch("/api/assets", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing?.id, quantity: Number(quantity), averagePrice: Number(averagePrice) }) })
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Could not update holding") }
+      setEditing(null); await refresh()
+    } catch (e) { setSaveError((e as Error).message) } finally { setSaving(false) }
+  }
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Remove this holding from your portfolio?")) return
@@ -30,7 +47,7 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
   if (holdings.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Your portfolio is empty. Use “Add Investment” to record your first holding.
+        No holdings to display. Add an investment or adjust your search and filters.
       </p>
     )
   }
@@ -100,6 +117,7 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
                   {holding.type === "Cash" ? "—" : formatPercent(holding.returnPercent)}
                 </td>
                 <td className="p-3 text-right">
+                  <button type="button" aria-label={`Edit ${holding.name}`} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => { setEditing(holding); setQuantity(String(holding.quantity)); setAveragePrice(String(holding.averagePrice)); setSaveError("") }}><Pencil className="h-4 w-4" /></button>
                   <button
                     type="button"
                     onClick={() => handleDelete(holding.id)}
@@ -115,6 +133,7 @@ export function PortfolioTable({ holdings }: { holdings: HoldingRow[] }) {
           </tbody>
         </table>
       </div>
+      <Dialog open={Boolean(editing)} onOpenChange={value => { if (!value && !saving) setEditing(null) }}><DialogContent><DialogHeader><DialogTitle>Correct holding</DialogTitle><DialogDescription>{editing?.name}. This corrects your recorded balance without changing past transactions. Record a transaction for new purchases or sales.</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><div><Label htmlFor="edit-quantity">Quantity</Label><Input id="edit-quantity" type="number" min="0.000001" step="any" required value={quantity} onChange={e => setQuantity(e.target.value)} /></div><div><Label htmlFor="edit-average">Average cost per unit (₹)</Label><Input id="edit-average" type="number" min="0" step="any" required value={averagePrice} onChange={e => setAveragePrice(e.target.value)} /></div>{saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}<Button type="submit" disabled={saving} className="w-full">{saving ? "Saving..." : "Save correction"}</Button></form></DialogContent></Dialog>
     </div>
   )
 }

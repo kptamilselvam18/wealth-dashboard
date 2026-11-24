@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Trash2 } from "lucide-react"
+import { ExportButton } from "@/components/export-button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectItem } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageError, PageLoading } from "@/components/page-state"
 import { useSummary } from "@/components/summary-provider"
@@ -30,6 +33,11 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
+  const [type, setType] = useState("ALL")
+  const [from, setFrom] = useState("")
+  const [to, setTo] = useState("")
+  const filtered = (transactions ?? []).filter(t => (!query || `${t.name} ${t.symbol ?? ""} ${t.notes ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (type === "ALL" || t.type === type) && (!from || t.date.slice(0,10) >= from) && (!to || t.date.slice(0,10) <= to))
 
   const load = useCallback(async () => {
     try {
@@ -46,6 +54,8 @@ export default function TransactionsPage() {
   }, [])
 
   useEffect(() => {
+    // Initial synchronization with the server's transaction records.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
 
@@ -80,7 +90,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold">Transactions</h1>
           <p className="text-muted-foreground">Complete transaction history</p>
         </div>
-        <AddTransactionButton onCreated={load} />
+        <div className="flex flex-wrap gap-2"><ExportButton type="transactions" /><AddTransactionButton onCreated={load} /></div>
       </div>
 
       {error && (
@@ -90,15 +100,21 @@ export default function TransactionsPage() {
       )}
 
       <Card>
+        <div className="grid gap-3 border-b p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Input aria-label="Search transactions" placeholder="Search asset or notes..." value={query} onChange={e => setQuery(e.target.value)} />
+          <Select aria-label="Transaction type" value={type} onValueChange={setType}><SelectItem value="ALL">All types</SelectItem>{["BUY", "SELL", "SIP", "DEPOSIT", "WITHDRAWAL", "DIVIDEND", "INTEREST", "OTHER"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</Select>
+          <Input aria-label="From date" type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          <Input aria-label="To date" type="date" min={from || undefined} value={to} onChange={e => setTo(e.target.value)} />
+        </div>
         <CardHeader>
           <CardTitle className="text-base font-semibold">
-            {transactions?.length ?? 0} transaction{transactions?.length === 1 ? "" : "s"}
+            {filtered.length} matching transaction{filtered.length === 1 ? "" : "s"} · latest 200 records. CSV includes all records.
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!transactions || transactions.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No transactions yet. Record a buy, sell or deposit to get started.
+              No matching transactions. Adjust your filters or add a transaction.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -116,7 +132,7 @@ export default function TransactionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((transaction) => (
+                  {filtered.map((transaction) => (
                     <tr
                       key={transaction.id}
                       className="border-b transition-colors hover:bg-accent/50"

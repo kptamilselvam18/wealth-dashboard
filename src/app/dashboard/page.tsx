@@ -11,6 +11,8 @@ import {
   Target,
   TrendingUp,
   Wallet,
+  ArrowUpRight,
+  CheckCircle2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,6 +31,7 @@ const QUICK_LINKS = [
   { href: "/calculators", label: "Calculators", icon: Calculator },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/health", label: "Financial Health", icon: HeartPulse },
+  { href: "/liabilities", label: "Manage debts", icon: CreditCard },
 ]
 
 function MetricCard({
@@ -120,7 +123,7 @@ export default function DashboardPage() {
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {today}
           </p>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight">
+          <h1 className="mt-1.5 text-3xl font-semibold tracking-tight sm:text-4xl">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Investor"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -176,7 +179,9 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {!summary.holdings.length && <section className="mt-6 overflow-hidden rounded-2xl border bg-card p-6 sm:p-8"><div className="mb-6 flex items-start justify-between gap-4"><div><p className="eyebrow">A LITTLE CLARITY GOES A LONG WAY</p><h2 className="mt-2 text-xl font-semibold tracking-tight">Build your financial picture</h2><p className="mt-2 text-sm text-muted-foreground">Start with what you own, then decide where you want to go.</p></div><span className="rounded-full bg-primary/10 p-3 text-primary"><CheckCircle2 className="h-6 w-6" /></span></div><div className="grid gap-3 sm:grid-cols-3">{[["01", "Add an investment", "Bring your holdings together", "/portfolio"], ["02", "Set your first goal", "Give your money a direction", "/goals"], ["03", "Check financial health", "Understand your next priorities", "/health"]].map(([step, title, text, href]) => <Link key={step} href={href} className="group rounded-xl border bg-background/60 p-4 transition-colors hover:border-primary/40"><div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-primary">{step}</span><ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-muted-foreground">{text}</p></Link>)}</div></section>}
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <PerformanceChart performance={summary.performance} />
         <AssetAllocationCard allocation={summary.allocation} />
       </div>
